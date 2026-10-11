@@ -1,0 +1,6 @@
+{
+  "name": "Sugar Business",
+  "description": "منصة ولاء العملاء والكروت الذكية ونقاط المكافآت وخدمات التجار الرائدة",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

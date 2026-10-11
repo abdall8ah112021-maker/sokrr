@@ -1,0 +1,780 @@
+{
+  "users": [
+    {
+      "id": "usr_super_admin_01",
+      "phone": "01026541250",
+      "email": "abdall8ah112021@gmail.com",
+      "passwordHash": "036a03cc700db9d811ba5f824e4f59fc:ca9933eaf2cb2a14b8c18d515a44b2f910853ad0f31f0eaa4ceb23a78dc7a5417f833fe2d3692b939d9460f3fe5936276bcf926c61082b69e1107cddbef290b2",
+      "role": "SUPER_ADMIN",
+      "status": "ACTIVE",
+      "failedLoginAttempts": 0,
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "lockoutUntil": null,
+      "lastLoginAt": "2026-10-11T00:40:09.571Z",
+      "lastLoginIp": "127.0.0.1"
+    }
+  ],
+  "refreshTokens": [],
+  "customers": [],
+  "cards": [],
+  "cardHistory": [],
+  "pointAccounts": [],
+  "pointLedger": [],
+  "businesses": [],
+  "employees": [],
+  "transactions": [],
+  "sectors": [
+    {
+      "id": "sec_01",
+      "name": "Food & Beverage",
+      "nameAr": "المطاعم والكافيهات",
+      "icon": "Coffee",
+      "count": 42
+    },
+    {
+      "id": "sec_02",
+      "name": "Retail & Fashion",
+      "nameAr": "الملابس والأزياء",
+      "icon": "ShoppingBag",
+      "count": 28
+    },
+    {
+      "id": "sec_03",
+      "name": "Healthcare & Wellness",
+      "nameAr": "الصحة والجمال والعناية",
+      "icon": "HeartPulse",
+      "count": 19
+    },
+    {
+      "id": "sec_04",
+      "name": "Automotive",
+      "nameAr": "خدمات وصيانة السيارات",
+      "icon": "Car",
+      "count": 15
+    },
+    {
+      "id": "sec_05",
+      "name": "Electronics & Tech",
+      "nameAr": "الإلكترونيات والتقنية",
+      "icon": "Smartphone",
+      "count": 24
+    },
+    {
+      "id": "sec_06",
+      "name": "Home & Living",
+      "nameAr": "المنزل والديكور",
+      "icon": "Home",
+      "count": 12
+    }
+  ],
+  "services": [
+    {
+      "id": "srv_01",
+      "name": "VIP Car Detailing & Wash",
+      "nameAr": "العناية الشاملة وتنظيف السيارات VIP",
+      "slug": "car-detailing-vip",
+      "icon": "Car",
+      "shortDescription": "خدمة غسيل وعناية وتلميع احترافي للسيارات بخصم حصري لحاملي الكارت.",
+      "fullDescription": "تشمل الخدمة فحصاً دقيقاً، غسيلاً بالبخار داخلياً وخارجياً، معالجة الجلد، وطبقة نانو سيراميك لحماية طلاء السيارة مع إضافة نقاط ولاء فورية لحسابك.",
+      "targetAudience": "أصحاب السيارات الباحثين عن خدمة عناية متكاملة ومضمونة",
+      "sectorId": "sec_04",
+      "isActive": true,
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    },
+    {
+      "id": "srv_02",
+      "name": "Dental Care & Scaling",
+      "nameAr": "تنظيف وتلميع وفحص الأسنان الدوري",
+      "slug": "dental-scaling-checkup",
+      "icon": "Smile",
+      "shortDescription": "جلسة طبية متكاملة لفحص وصحة الأسنان في أفضل المراكز المعتمدة.",
+      "fullDescription": "جلسة تشمل الكشف السريري وإزالة الجير والتصبغات وتلميع الأسنان بأحدث التقنيات السويسرية، مع خصم مخصص لأعضاء Sugar Business.",
+      "targetAudience": "الأفراد والعائلات المهتمين بصحة الفم والأسنان",
+      "sectorId": "sec_03",
+      "isActive": true,
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    },
+    {
+      "id": "srv_03",
+      "name": "Specialty Coffee Tasting & Catering",
+      "nameAr": "ضيافة القهوة المختصة للمناسبات والشركات",
+      "slug": "specialty-coffee-catering",
+      "icon": "Coffee",
+      "shortDescription": "محطة باريستا متنقلة بأرقى أنواع البن العالمي لمناسبتك واجتماعاتك.",
+      "fullDescription": "نقدم حلول ضيافة القهوة المختصة لمناسباتك واحتفالاتك الخاصة مع باريستا محترف ومعدات متطورة ومشروبات باردة وساخنة معتمدة.",
+      "targetAudience": "الشركات، المناسبات الخاصة، المعارض",
+      "sectorId": "sec_01",
+      "isActive": true,
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    }
+  ],
+  "serviceRequests": [],
+  "offers": [
+    {
+      "id": "off_01",
+      "businessId": "biz_01",
+      "title": "عرض الصيف: خصم 20% على باقة المشروبات الصيفية",
+      "description": "استمتع بأشهى المشروبات المنعشة والمثلجة طوال شهر سبتمبر مع خصم فوري ومضاعفة نقاط كارتك.",
+      "discount": 20,
+      "discountType": "PERCENTAGE",
+      "startDate": "2026-09-28T01:03:29.665Z",
+      "endDate": "2026-11-27T01:03:29.666Z",
+      "status": "ACTIVE",
+      "mainImage": "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=800&auto=format&fit=crop&q=80",
+      "conditions": "يسري العرض عند إبراز كارت Sugar Business أو مسحه في الكافيه. لا يمكن دمجه مع عروض أخرى.",
+      "selectedServiceIds": [
+        "srv_03"
+      ],
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    }
+  ],
+  "productCategories": [
+    {
+      "id": "cat_01",
+      "nameAr": "إلكترونيات واكسسوارات",
+      "nameEn": "Electronics",
+      "slug": "electronics"
+    },
+    {
+      "id": "cat_02",
+      "nameAr": "أدوات منزلية ومطبخ",
+      "nameEn": "Home & Kitchen",
+      "slug": "home-kitchen"
+    },
+    {
+      "id": "cat_03",
+      "nameAr": "إكسسوارات سفر وهدايا",
+      "nameEn": "Lifestyle & Gifts",
+      "slug": "lifestyle"
+    }
+  ],
+  "products": [
+    {
+      "id": "prd_01",
+      "name": "كوب حراري ذكي شاشة رقمية LED",
+      "description": "مج حافظ للحرارة 500 مل استانلس ستيل 316 مع شاشة لمس مدمجة لعرض درجة الحرارة وتصميم أسود فخم.",
+      "categoryId": "cat_02",
+      "paymentType": "POINTS",
+      "cashPrice": 0,
+      "pointsPrice": 150,
+      "inventory": 44,
+      "lowStockThreshold": 5,
+      "status": "ACTIVE",
+      "images": [
+        "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80"
+      ],
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    },
+    {
+      "id": "prd_02",
+      "name": "سماعات بلوتوث لاسلكية عازلة للضوضاء ANC",
+      "description": "سماعات احترافية متوافقة مع جميع الأجهزة مع بطارية تدوم حتى 36 ساعة وشحن سريع من نوع Type-C.",
+      "categoryId": "cat_01",
+      "paymentType": "CASH",
+      "cashPrice": 1250,
+      "pointsPrice": 0,
+      "inventory": 18,
+      "lowStockThreshold": 4,
+      "status": "ACTIVE",
+      "images": [
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80"
+      ],
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    },
+    {
+      "id": "prd_03",
+      "name": "باور بانك مغناطيسي نحيف 10000mAh",
+      "description": "شاحن متنقل لاسلكي متوافق مع MagSafe مع شاشة عرض النسبة ومخرج شحن فائق السرعة 22.5W.",
+      "categoryId": "cat_01",
+      "paymentType": "POINTS",
+      "pointsPrice": 300,
+      "cashPrice": 0,
+      "inventory": 22,
+      "lowStockThreshold": 5,
+      "status": "ACTIVE",
+      "images": [
+        "https://images.unsplash.com/photo-1609592426505-88574c87895e?w=800&auto=format&fit=crop&q=80"
+      ],
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    },
+    {
+      "id": "prd_04",
+      "name": "حقيبة سفر مقاومة للماء مع قفل أمان TSA",
+      "description": "حقيبة ظهر عصرية للأعمال واللابتوب حتى 16 بوصة مع فتحة شحن USB ومقصورات متعددة منظمة.",
+      "categoryId": "cat_03",
+      "paymentType": "CASH",
+      "cashPrice": 890,
+      "pointsPrice": 0,
+      "inventory": 14,
+      "lowStockThreshold": 3,
+      "status": "ACTIVE",
+      "images": [
+        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80"
+      ],
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    }
+  ],
+  "orders": [],
+  "favorites": [],
+  "reviews": [],
+  "notifications": [
+    {
+      "id": "notif_01",
+      "userId": "usr_customer_01",
+      "title": "مرحباً بك في Sugar Business",
+      "message": "تم تفعيل كارتك البلاستيكي الذكي ورصيدك الحالي 350 نقطة. استمتع بمكافآتك الحصرية!",
+      "type": "POINTS_EARNED",
+      "priority": "MEDIUM",
+      "isRead": false,
+      "isHidden": false,
+      "deepLink": "/card",
+      "createdAt": "2026-09-28T01:03:29.665Z"
+    },
+    {
+      "id": "notif_02",
+      "userId": "usr_customer_01",
+      "title": "تم تسليم طلبك بنجاح",
+      "message": "تم تسليم الطلب رقم ORD-2026-0001 بنجاح، نتمنى لك تجربة ممتعة مع Sugar Business.",
+      "type": "ORDER_STATUS",
+      "priority": "LOW",
+      "isRead": true,
+      "isHidden": false,
+      "deepLink": "/orders/ord_01",
+      "createdAt": "2026-09-28T01:03:29.665Z"
+    },
+    {
+      "userId": "usr_customer_01",
+      "title": "تمت إضافة نقاط جديدة لحسابك!",
+      "message": "حصلت على 10 نقطة من متجر شوغار بريميوم للقهوة والحلويات (تجريبي). رصيدك الجديد في أمان.",
+      "type": "POINTS_EARNED",
+      "priority": "MEDIUM",
+      "deepLink": "/points",
+      "id": "notif_6355c244",
+      "isRead": false,
+      "isHidden": false,
+      "createdAt": "2026-09-28T01:03:32.574Z"
+    },
+    {
+      "userId": "usr_customer_01",
+      "title": "تمت إضافة نقاط جديدة لحسابك!",
+      "message": "حصلت على 10 نقطة من متجر شوغار بريميوم للقهوة والحلويات (تجريبي). رصيدك الجديد في أمان.",
+      "type": "POINTS_EARNED",
+      "priority": "MEDIUM",
+      "deepLink": "/points",
+      "id": "notif_36c2c146",
+      "isRead": false,
+      "isHidden": false,
+      "createdAt": "2026-09-28T01:03:37.798Z"
+    },
+    {
+      "userId": "usr_customer_01",
+      "title": "تم استلام طلبك بنجاح",
+      "message": "تم تسجيل طلبك رقم ORD-2026-0002. سنقوم بإشعارك فور خروج الشحنة.",
+      "type": "ORDER_STATUS",
+      "priority": "MEDIUM",
+      "deepLink": "/orders/ord_45c006d2",
+      "id": "notif_32aca3f5",
+      "isRead": false,
+      "isHidden": false,
+      "createdAt": "2026-09-28T01:03:46.602Z"
+    }
+  ],
+  "news": [
+    {
+      "id": "news_01",
+      "title": "انطلاق منظومة Sugar Business رسمياً في مصر: عصر جديد لولاء العملاء",
+      "content": "يسر إدارة Sugar Business الإعلان عن إطلاق المنظومة الرائدة في الجمهورية، والتي تتيح للعملاء الحصول على كارت بلاستيكي ذكي بتقنية QR الموحدة، وجمع النقاط الفورية لدى شبكة واسعة من كبرى المتاجر ومقدمي الخدمات في مختلف المحافظات.\nتهدف المنظومة إلى تقديم قيمة حقيقية للعملاء عبر استبدال النقاط بمنتجات حصرية وتجارب فريدة، مع تمكين أصحاب الأعمال من توسيع قاعدة عملائهم ومكافأتهم بأعلى درجات الموثوقية والأمان.",
+      "imageUrl": "https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=1200&auto=format&fit=crop&q=80",
+      "category": "أخبار المنظومة",
+      "author": "إدارة Sugar Business",
+      "status": "PUBLISHED",
+      "publishDate": "2026-09-28T01:03:29.665Z",
+      "views": 1420,
+      "likes": 96,
+      "tags": [
+        "انطلاق",
+        "ولاء_العملاء",
+        "كروت_ذكية",
+        "مكافآت"
+      ],
+      "comments": [
+        {
+          "id": "comm_01",
+          "userName": "طارق حسني",
+          "comment": "خطوة ممتازة ونظام واعد جداً يسهل كسب المكافآت!",
+          "isApproved": true,
+          "createdAt": "2026-09-28T01:03:29.665Z"
+        }
+      ],
+      "createdAt": "2026-09-28T01:03:29.665Z",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    }
+  ],
+  "supportTickets": [],
+  "faqs": [
+    {
+      "id": "faq_01",
+      "category": "الكروت الذكية",
+      "question": "كيف أحصل على كارت Sugar Business البلاستيكي؟",
+      "answer": "يمكنك إنشاء حسابك كعميل جديد عبر المنصة، وبعد مراجعة الطلب والموافقة عليه من الإدارة، يتم إصدار كارتك البلاستيكي المطبوع بالرقم التسلسلي ورمز QR وشحنه مباشرة إلى عنوانك.",
+      "order": 1,
+      "isVisible": true
+    },
+    {
+      "id": "faq_02",
+      "category": "النقاط والمكافآت",
+      "question": "كم عدد النقاط التي أحصل عليها مع كل عملية شراء؟",
+      "answer": "القيمة الافتراضية هي 10 نقاط لكل عملية شراء مؤكدة عبر مسح الكارت، وقد تمنح بعض المتاجر الشريكة نقاطاً مضاعفة خلال فترات العروض الخاصة.",
+      "order": 2,
+      "isVisible": true
+    },
+    {
+      "id": "faq_03",
+      "category": "النقاط والمكافآت",
+      "question": "ما هي مدة صلاحية النقاط وكيف تتم متابعتها؟",
+      "answer": "تنتهي صلاحية النقاط بعد مرور 6 أشهر من تاريخ اكتسابها، ويرسل لك النظام إشعارات تنبيهية تلقائية قبل موعد الانتهاء بـ 30 يوماً و7 أيام وفي يوم الانتهاء.",
+      "order": 3,
+      "isVisible": true
+    },
+    {
+      "id": "faq_04",
+      "category": "المتجر والطلبات",
+      "question": "هل يمكن الجمع بين الدفع بالنقاط والدفع النقدي في نفس الطلب؟",
+      "answer": "لا، وفقاً لسياسة المتجر الصارمة، يُمنع دمج المنتجات النقدية مع منتجات النقاط في سلة واحدة، حيث تُنفذ طلبات النقاط بشكل منفصل لضمان الشفافية ودقة الحسابات.",
+      "order": 4,
+      "isVisible": true
+    },
+    {
+      "id": "faq_05",
+      "category": "أصحاب الأعمال",
+      "question": "كيف يمكن لمتجري أو نشاطي الانضمام كشريك في Sugar Business؟",
+      "answer": "يمكنك النقر على \"تسجيل كشريك تجاري\"، وملء بيانات المنشأة ومستنداتها ورفع الشعار، وسيقوم فريق المراجعة والتدقيق بالتواصل معك وتفعيل حسابك وإضافته لدليل المتاجر المعتمد.",
+      "order": 5,
+      "isVisible": true
+    }
+  ],
+  "cmsPages": [
+    {
+      "id": "cms_01",
+      "slug": "about-us",
+      "title": "عن Sugar Business",
+      "content": "Sugar Business هي المنظومة المتكاملة الأولى لربط ولاء العملاء بالكروت البلاستيكية الذكية وشبكات الأعمال والمتاجر المعتمدة. نهدف إلى تقديم تجربة مكافآت شفافة، حقيقية، ومضمونة تمنح العميل قيمة ملموسة مع كل مسح للكارت، وتمكن التجار من بناء علاقات مستدامة ومربحة مع عملائهم الأوفياء.",
+      "metaTitle": "عن Sugar Business – ريادة ولاء العملاء والمكافآت الذكية",
+      "metaDesc": "تعرف على رؤية وأهداف منظومة Sugar Business الرائدة لولاء العملاء وكروت المكافآت الذكية.",
+      "version": 3,
+      "status": "PUBLISHED",
+      "updatedAt": "2026-10-11T00:40:09.580Z"
+    },
+    {
+      "id": "cms_02",
+      "slug": "terms-and-conditions",
+      "title": "الشروط والأحكام",
+      "content": "باستخدامك لمنصة Sugar Business أو حيازتك لكارت العضوية، فإنك توافق على الالتزام بكافة الشروط والأحكام المنظمة للبرنامج، بما في ذلك قواعد احتساب واستبدال النقاط وسياسات الشراء والإرجاع في المتجر.",
+      "metaTitle": "الشروط والأحكام – Sugar Business",
+      "metaDesc": "الشروط والأحكام المنظمة لاستخدام كروت ومنصة Sugar Business",
+      "version": 1,
+      "status": "PUBLISHED",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    },
+    {
+      "id": "cms_03",
+      "slug": "privacy-policy",
+      "title": "سياسة الخصوصية وأمان البيانات",
+      "content": "نحن نولي خصوصية بياناتك وأمان معاملاتك أقصى درجات العناية. لا نقوم بمشاركة أي بيانات مالية أو شخصية حساسة مع أي أطراف غير مخولة، وتُطبق أعلى معايير التشفير والتدقيق الأمني على كافة العمليات.",
+      "metaTitle": "سياسة الخصوصية – Sugar Business",
+      "metaDesc": "سياسة حماية البيانات والخصوصية والأمان لمنظومة Sugar Business",
+      "version": 1,
+      "status": "PUBLISHED",
+      "updatedAt": "2026-09-28T01:03:29.665Z"
+    }
+  ],
+  "media": [],
+  "settings": [
+    {
+      "id": "set_01",
+      "key": "points_per_purchase",
+      "value": "10",
+      "category": "points",
+      "type": "number",
+      "description": "عدد النقاط المكتسبة لكل عملية شراء افتراضية عند مسح الكارت",
+      "isSensitive": false,
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "updatedBy": "usr_super_admin_01"
+    },
+    {
+      "id": "set_02",
+      "key": "points_expiry_months",
+      "value": "6",
+      "category": "points",
+      "type": "number",
+      "description": "مدة صلاحية النقاط بالأشهر من تاريخ الاكتساب",
+      "isSensitive": false,
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "updatedBy": "usr_super_admin_01"
+    },
+    {
+      "id": "set_03",
+      "key": "card_validity_days",
+      "value": "365",
+      "category": "cards",
+      "type": "number",
+      "description": "صلاحية الكارت البلاستيكي الافتراضية بالأيام (سنة واحدة)",
+      "isSensitive": false,
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "updatedBy": "usr_super_admin_01"
+    },
+    {
+      "id": "set_04",
+      "key": "silver_level_threshold",
+      "value": "300",
+      "category": "loyalty",
+      "type": "number",
+      "description": "الحد الأدنى للنقاط التاريخية للترقية إلى المستوى الفضي",
+      "isSensitive": false,
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "updatedBy": "usr_super_admin_01"
+    },
+    {
+      "id": "set_05",
+      "key": "gold_level_threshold",
+      "value": "1000",
+      "category": "loyalty",
+      "type": "number",
+      "description": "الحد الأدنى للنقاط التاريخية للترقية إلى المستوى الذهبي",
+      "isSensitive": false,
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "updatedBy": "usr_super_admin_01"
+    },
+    {
+      "id": "set_06",
+      "key": "platinum_level_threshold",
+      "value": "2500",
+      "category": "loyalty",
+      "type": "number",
+      "description": "الحد الأدنى للنقاط التاريخية للترقية إلى المستوى البلاتيني VIP",
+      "isSensitive": false,
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "updatedBy": "usr_super_admin_01"
+    },
+    {
+      "id": "set_07",
+      "key": "maintenance_mode",
+      "value": "false",
+      "category": "system",
+      "type": "boolean",
+      "description": "تفعيل وضع الصيانة العام للنظام مع إمكانية دخول الإدارة فقط",
+      "isSensitive": true,
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "updatedBy": "usr_super_admin_01"
+    },
+    {
+      "id": "set_08",
+      "key": "maintenance_message",
+      "value": "جاري إجراء تحديثات دورية مجدولة لتحسين الأداء والأمان. سنعود للعمل قريباً.",
+      "category": "system",
+      "type": "string",
+      "description": "رسالة الصيانة التي تظهر للزوار والعملاء أثناء وضع الصيانة",
+      "isSensitive": false,
+      "updatedAt": "2026-09-28T01:03:29.665Z",
+      "updatedBy": "usr_super_admin_01"
+    }
+  ],
+  "auditLogs": [
+    {
+      "actorId": "usr_super_admin_01",
+      "actorRole": "ADMIN",
+      "action": "UPDATE_CMS_PAGE",
+      "entity": "CMS_PAGE",
+      "entityId": "cms_01",
+      "before": {
+        "id": "cms_01",
+        "slug": "about-us",
+        "title": "عن Sugar Business (محدثة)",
+        "content": "محتوى تجريبي تم تحديثه بواسطة الأدمن بنجاح.",
+        "metaTitle": "عن Sugar Business – ريادة ولاء العملاء والمكافآت الذكية",
+        "metaDesc": "تعرف على رؤية وأهداف منظومة Sugar Business الرائدة لولاء العملاء وكروت المكافآت الذكية.",
+        "version": 2,
+        "status": "PUBLISHED",
+        "updatedAt": "2026-10-11T00:40:03.625Z"
+      },
+      "after": {
+        "id": "cms_01",
+        "slug": "about-us",
+        "title": "عن Sugar Business",
+        "content": "Sugar Business هي المنظومة المتكاملة الأولى لربط ولاء العملاء بالكروت البلاستيكية الذكية وشبكات الأعمال والمتاجر المعتمدة. نهدف إلى تقديم تجربة مكافآت شفافة، حقيقية، ومضمونة تمنح العميل قيمة ملموسة مع كل مسح للكارت، وتمكن التجار من بناء علاقات مستدامة ومربحة مع عملائهم الأوفياء.",
+        "metaTitle": "عن Sugar Business – ريادة ولاء العملاء والمكافآت الذكية",
+        "metaDesc": "تعرف على رؤية وأهداف منظومة Sugar Business الرائدة لولاء العملاء وكروت المكافآت الذكية.",
+        "version": 3,
+        "status": "PUBLISHED",
+        "updatedAt": "2026-10-11T00:40:09.580Z"
+      },
+      "reason": "تعديل محتوى الصفحة عن Sugar Business (about-us)",
+      "id": "aud_a97fc69b",
+      "timestamp": "2026-10-11T00:40:09.580Z"
+    },
+    {
+      "actorId": "usr_super_admin_01",
+      "actorRole": "ADMIN",
+      "action": "UPDATE_CMS_PAGE",
+      "entity": "CMS_PAGE",
+      "entityId": "cms_01",
+      "before": {
+        "id": "cms_01",
+        "slug": "about-us",
+        "title": "عن Sugar Business",
+        "content": "Sugar Business هي المنظومة المتكاملة الأولى لربط ولاء العملاء بالكروت البلاستيكية الذكية وشبكات الأعمال والمتاجر المعتمدة. نهدف إلى تقديم تجربة مكافآت شفافة، حقيقية، ومضمونة تمنح العميل قيمة ملموسة مع كل مسح للكارت، وتمكن التجار من بناء علاقات مستدامة ومربحة مع عملائهم الأوفياء.",
+        "metaTitle": "عن Sugar Business – ريادة ولاء العملاء والمكافآت الذكية",
+        "metaDesc": "تعرف على رؤية وأهداف منظومة Sugar Business الرائدة لولاء العملاء وكروت المكافآت الذكية.",
+        "version": 1,
+        "status": "PUBLISHED",
+        "updatedAt": "2026-09-28T01:03:29.665Z"
+      },
+      "after": {
+        "id": "cms_01",
+        "slug": "about-us",
+        "title": "عن Sugar Business",
+        "content": "Sugar Business هي المنظومة المتكاملة الأولى لربط ولاء العملاء بالكروت البلاستيكية الذكية وشبكات الأعمال والمتاجر المعتمدة. نهدف إلى تقديم تجربة مكافآت شفافة، حقيقية، ومضمونة تمنح العميل قيمة ملموسة مع كل مسح للكارت، وتمكن التجار من بناء علاقات مستدامة ومربحة مع عملائهم الأوفياء.",
+        "metaTitle": "عن Sugar Business – ريادة ولاء العملاء والمكافآت الذكية",
+        "metaDesc": "تعرف على رؤية وأهداف منظومة Sugar Business الرائدة لولاء العملاء وكروت المكافآت الذكية.",
+        "version": 3,
+        "status": "PUBLISHED",
+        "updatedAt": "2026-10-11T00:40:09.580Z"
+      },
+      "reason": "تعديل محتوى الصفحة عن Sugar Business (محدثة) (about-us)",
+      "id": "aud_ecd97789",
+      "timestamp": "2026-10-11T00:40:03.625Z"
+    },
+    {
+      "id": "aud_01",
+      "actorId": "usr_super_admin_01",
+      "actorRole": "SUPER_ADMIN",
+      "action": "SYSTEM_BOOTSTRAP",
+      "entity": "SYSTEM",
+      "entityId": "ROOT",
+      "ip": "127.0.0.1",
+      "reason": "تهيئة منظومة Sugar Business بنجاح مع القواعد المعتمدة",
+      "timestamp": "2026-09-28T01:03:29.665Z"
+    }
+  ],
+  "governorates": [
+    {
+      "id": "gov_cairo",
+      "nameAr": "القاهرة",
+      "nameEn": "Cairo",
+      "available": true,
+      "deliveryFee": 45
+    },
+    {
+      "id": "gov_giza",
+      "nameAr": "الجيزة",
+      "nameEn": "Giza",
+      "available": true,
+      "deliveryFee": 45
+    },
+    {
+      "id": "gov_alex",
+      "nameAr": "الإسكندرية",
+      "nameEn": "Alexandria",
+      "available": true,
+      "deliveryFee": 55
+    },
+    {
+      "id": "gov_qalyubia",
+      "nameAr": "القليوبية",
+      "nameEn": "Qalyubia",
+      "available": true,
+      "deliveryFee": 50
+    },
+    {
+      "id": "gov_sharqia",
+      "nameAr": "الشرقية",
+      "nameEn": "Sharqia",
+      "available": true,
+      "deliveryFee": 55
+    },
+    {
+      "id": "gov_dakahlia",
+      "nameAr": "الدقهلية",
+      "nameEn": "Dakahlia",
+      "available": true,
+      "deliveryFee": 55
+    },
+    {
+      "id": "gov_gharbia",
+      "nameAr": "الغربية",
+      "nameEn": "Gharbia",
+      "available": true,
+      "deliveryFee": 55
+    },
+    {
+      "id": "gov_monufia",
+      "nameAr": "المنوفية",
+      "nameEn": "Monufia",
+      "available": true,
+      "deliveryFee": 55
+    },
+    {
+      "id": "gov_damietta",
+      "nameAr": "دمياط",
+      "nameEn": "Damietta",
+      "available": true,
+      "deliveryFee": 60
+    },
+    {
+      "id": "gov_port_said",
+      "nameAr": "بورسعيد",
+      "nameEn": "Port Said",
+      "available": true,
+      "deliveryFee": 60
+    },
+    {
+      "id": "gov_ismailia",
+      "nameAr": "الإسماعيلية",
+      "nameEn": "Ismailia",
+      "available": true,
+      "deliveryFee": 60
+    },
+    {
+      "id": "gov_suez",
+      "nameAr": "السويس",
+      "nameEn": "Suez",
+      "available": true,
+      "deliveryFee": 60
+    },
+    {
+      "id": "gov_beheira",
+      "nameAr": "البحيرة",
+      "nameEn": "Beheira",
+      "available": true,
+      "deliveryFee": 60
+    },
+    {
+      "id": "gov_kafr_el_sheikh",
+      "nameAr": "كفر الشيخ",
+      "nameEn": "Kafr El Sheikh",
+      "available": true,
+      "deliveryFee": 60
+    },
+    {
+      "id": "gov_fayoum",
+      "nameAr": "الفيوم",
+      "nameEn": "Fayoum",
+      "available": true,
+      "deliveryFee": 65
+    },
+    {
+      "id": "gov_beni_suef",
+      "nameAr": "بني سويف",
+      "nameEn": "Beni Suef",
+      "available": true,
+      "deliveryFee": 65
+    },
+    {
+      "id": "gov_minya",
+      "nameAr": "المنيا",
+      "nameEn": "Minya",
+      "available": true,
+      "deliveryFee": 70
+    },
+    {
+      "id": "gov_assiut",
+      "nameAr": "أسيوط",
+      "nameEn": "Assiut",
+      "available": true,
+      "deliveryFee": 70
+    },
+    {
+      "id": "gov_sohag",
+      "nameAr": "سوهاج",
+      "nameEn": "Sohag",
+      "available": true,
+      "deliveryFee": 75
+    },
+    {
+      "id": "gov_qena",
+      "nameAr": "قنا",
+      "nameEn": "Qena",
+      "available": true,
+      "deliveryFee": 80
+    },
+    {
+      "id": "gov_luxor",
+      "nameAr": "الأقصر",
+      "nameEn": "Luxor",
+      "available": true,
+      "deliveryFee": 85
+    },
+    {
+      "id": "gov_aswan",
+      "nameAr": "أسوان",
+      "nameEn": "Aswan",
+      "available": true,
+      "deliveryFee": 90
+    },
+    {
+      "id": "gov_red_sea",
+      "nameAr": "البحر الأحمر",
+      "nameEn": "Red Sea",
+      "available": true,
+      "deliveryFee": 90
+    },
+    {
+      "id": "gov_south_sinai",
+      "nameAr": "جنوب سيناء",
+      "nameEn": "South Sinai",
+      "available": true,
+      "deliveryFee": 90
+    },
+    {
+      "id": "gov_matrouh",
+      "nameAr": "مطروح",
+      "nameEn": "Matrouh",
+      "available": true,
+      "deliveryFee": 85
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job_points_expiry",
+      "name": "فحص النقاط منتهية الصلاحية",
+      "description": "فحص دوري لحركات النقاط التي تجاوزت 6 أشهر وإرسال تنبيهات للمستخدمين",
+      "schedule": "0 0 * * *",
+      "status": "IDLE",
+      "lastRun": "2026-09-28T01:03:29.665Z",
+      "nextRun": "2026-09-29T01:03:29.666Z",
+      "runCount": 24,
+      "failCount": 0
+    },
+    {
+      "id": "job_card_expiry",
+      "name": "فحص صلاحية الكروت وتجديدها",
+      "description": "متابعة الكروت التي أوشكت على انتهاء صلاحيتها بعد مرور عام وتنبيه أصحابها",
+      "schedule": "0 2 * * *",
+      "status": "IDLE",
+      "lastRun": "2026-09-28T01:03:29.665Z",
+      "nextRun": "2026-09-29T01:03:29.666Z",
+      "runCount": 24,
+      "failCount": 0
+    },
+    {
+      "id": "job_offers_cleanup",
+      "name": "أرشفة العروض المنتهية وربط الخدمات",
+      "description": "إيقاف العروض تلقائياً عند انتهاء مدتها أو في حال تعطيل الخدمة المرتبطة بها",
+      "schedule": "*/30 * * * *",
+      "status": "IDLE",
+      "lastRun": "2026-09-28T01:03:29.665Z",
+      "nextRun": "2026-09-28T01:33:29.666Z",
+      "runCount": 144,
+      "failCount": 0
+    }
+  ]
+}
