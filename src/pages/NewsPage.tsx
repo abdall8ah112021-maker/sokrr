@@ -25,7 +25,7 @@ export const NewsPage: React.FC<NewsPageProps> = ({ setCurrentTab }) => {
   const [commentSuccess, setCommentSuccess] = useState(false);
 
   useEffect(() => {
-    api.getNews().then(setArticles).catch(() => {});
+    api.getNews().then((res) => setArticles(Array.isArray(res) ? res : [])).catch(() => setArticles([]));
   }, []);
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -93,7 +93,7 @@ export const NewsPage: React.FC<NewsPageProps> = ({ setCurrentTab }) => {
 
           {/* Tags */}
           <div className="flex flex-wrap gap-2 text-xs">
-            {selectedArticle.tags.map((t, idx) => (
+            {(selectedArticle.tags || []).map((t, idx) => (
               <span key={idx} className="text-slate-400 font-mono">
                 #{t}
               </span>
@@ -104,7 +104,7 @@ export const NewsPage: React.FC<NewsPageProps> = ({ setCurrentTab }) => {
           <div className="space-y-6 pt-6 border-t border-slate-800">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-sky-400" />
-              <span>التعليقات ({selectedArticle.comments.length})</span>
+              <span>التعليقات ({(selectedArticle.comments || []).length})</span>
             </h3>
 
             {commentSuccess && (
@@ -137,7 +137,7 @@ export const NewsPage: React.FC<NewsPageProps> = ({ setCurrentTab }) => {
             )}
 
             <div className="space-y-3">
-              {selectedArticle.comments.map((c) => (
+              {(selectedArticle.comments || []).map((c) => (
                 <div key={c.id} className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs space-y-1">
                   <div className="flex justify-between text-slate-400">
                     <strong className="text-white">{c.userName}</strong>
@@ -166,7 +166,7 @@ export const NewsPage: React.FC<NewsPageProps> = ({ setCurrentTab }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {articles.map((art) => (
+        {(Array.isArray(articles) ? articles : []).map((art) => (
           <div
             key={art.id}
             onClick={() => setSelectedArticle(art)}

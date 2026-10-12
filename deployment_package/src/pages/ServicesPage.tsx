@@ -36,13 +36,14 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getSectors().then(setSectors).catch(() => {});
-    api.getServices().then(setServices).catch(() => {});
+    api.getSectors().then((res) => setSectors(Array.isArray(res) ? res : [])).catch(() => setSectors([]));
+    api.getServices().then((res) => setServices(Array.isArray(res) ? res : [])).catch(() => setServices([]));
   }, []);
 
-  const filteredServices = selectedSector === 'ALL'
-    ? services
-    : services.filter((s) => s.sectorId === selectedSector);
+  const filteredServices = (Array.isArray(services) ? services : []).filter((s) => {
+    if (!s) return false;
+    return selectedSector === 'ALL' || s.sectorId === selectedSector;
+  });
 
   const handleSendRequest = async (e: React.FormEvent) => {
     e.preventDefault();

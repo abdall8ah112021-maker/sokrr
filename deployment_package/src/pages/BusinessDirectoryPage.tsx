@@ -28,14 +28,19 @@ export const BusinessDirectoryPage: React.FC<BusinessDirectoryPageProps> = ({
   const [selectedGovernorate, setSelectedGovernorate] = useState('ALL');
 
   useEffect(() => {
-    api.getDirectory().then(setBusinesses).catch(() => {});
+    api.getDirectory().then((res) => setBusinesses(Array.isArray(res) ? res : [])).catch(() => setBusinesses([]));
   }, []);
 
-  const filteredBusinesses = businesses.filter((b) => {
+  const filteredBusinesses = (Array.isArray(businesses) ? businesses : []).filter((b) => {
+    if (!b) return false;
+    const name = b.businessName || '';
+    const desc = b.description || '';
+    const city = b.city || '';
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
-      b.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.city.toLowerCase().includes(searchQuery.toLowerCase());
+      name.toLowerCase().includes(query) ||
+      desc.toLowerCase().includes(query) ||
+      city.toLowerCase().includes(query);
     const matchesGov = selectedGovernorate === 'ALL' || b.governorate === selectedGovernorate;
     return matchesSearch && matchesGov;
   });

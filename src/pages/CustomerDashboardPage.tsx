@@ -34,9 +34,9 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
 
   useEffect(() => {
     refreshProfile();
-    api.getMyOrders().then(setOrders).catch(() => {});
-    api.getMyServiceRequests().then(setRequests).catch(() => {});
-    api.getMyPoints().then((data) => setLedger(data.ledger || [])).catch(() => {});
+    api.getMyOrders().then((res) => setOrders(Array.isArray(res) ? res : [])).catch(() => setOrders([]));
+    api.getMyServiceRequests().then((res) => setRequests(Array.isArray(res) ? res : [])).catch(() => setRequests([]));
+    api.getMyPoints().then((data) => setLedger(Array.isArray(data?.ledger) ? data.ledger : [])).catch(() => setLedger([]));
     setLoading(false);
   }, []);
 
@@ -188,7 +188,7 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
             </div>
 
             <div className="divide-y divide-slate-800/80">
-              {ledger.slice(0, 3).map((item) => (
+              {(Array.isArray(ledger) ? ledger : []).slice(0, 3).map((item) => (
                 <div key={item.id} className="py-3 flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-white">{item.reason || 'حركة نقاط'}</p>
@@ -229,13 +229,13 @@ export const CustomerDashboardPage: React.FC<CustomerDashboardPageProps> = ({
           </button>
         </div>
 
-        {orders.length === 0 ? (
+        {(!orders || orders.length === 0) ? (
           <div className="text-center py-8 text-slate-500 text-xs">
             لا توجد طلبات سابقة حتى الآن. تصفح المتجر الآن لاستبدال نقاطك!
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {orders.slice(0, 2).map((order) => (
+            {(Array.isArray(orders) ? orders : []).slice(0, 2).map((order) => (
               <div
                 key={order.id}
                 onClick={() => {

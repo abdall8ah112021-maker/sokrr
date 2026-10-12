@@ -27,10 +27,11 @@ export const StorePage: React.FC<StorePageProps> = ({
   const [cartAlert, setCartAlert] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getProducts().then(setProducts).catch(() => {});
+    api.getProducts().then((res) => setProducts(Array.isArray(res) ? res : [])).catch(() => setProducts([]));
   }, []);
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = (Array.isArray(products) ? products : []).filter((p) => {
+    if (!p) return false;
     if (activeFilter === 'POINTS') return p.paymentType === 'POINTS';
     if (activeFilter === 'CASH') return p.paymentType === 'CASH';
     return true;
@@ -112,7 +113,7 @@ export const StorePage: React.FC<StorePageProps> = ({
               {/* Product Image */}
               <div className="relative aspect-square w-full bg-slate-900 overflow-hidden">
                 <img
-                  src={p.images[0]}
+                  src={p.images?.[0] || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80'}
                   alt={p.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />

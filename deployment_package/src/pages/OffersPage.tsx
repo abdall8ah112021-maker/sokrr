@@ -23,7 +23,7 @@ export const OffersPage: React.FC<OffersPageProps> = ({
   const [offers, setOffers] = useState<Offer[]>([]);
 
   useEffect(() => {
-    api.getActiveOffers().then(setOffers).catch(() => {});
+    api.getActiveOffers().then((res) => setOffers(Array.isArray(res) ? res : [])).catch(() => setOffers([]));
   }, []);
 
   return (
@@ -37,7 +37,7 @@ export const OffersPage: React.FC<OffersPageProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {offers.map((offer) => (
+        {(Array.isArray(offers) ? offers : []).map((offer) => (
           <div
             key={offer.id}
             className="rounded-3xl bg-[#0c101c] border border-slate-800 hover:border-sky-500/40 transition-all overflow-hidden flex flex-col justify-between group shadow-lg text-right"

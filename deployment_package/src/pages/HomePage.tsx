@@ -46,20 +46,21 @@ export const HomePage: React.FC<HomePageProps> = ({
   const [reviewIndex, setReviewIndex] = useState(0);
 
   useEffect(() => {
-    api.getServices().then(setServices).catch(() => {});
-    api.getProducts().then(setProducts).catch(() => {});
-    api.getDirectory().then(setBusinesses).catch(() => {});
+    api.getServices().then((res) => setServices(Array.isArray(res) ? res : [])).catch(() => setServices([]));
+    api.getProducts().then((res) => setProducts(Array.isArray(res) ? res : [])).catch(() => setProducts([]));
+    api.getDirectory().then((res) => setBusinesses(Array.isArray(res) ? res : [])).catch(() => setBusinesses([]));
     api.getAdminMetrics().then(setMetrics).catch(() => {});
   }, []);
 
-  // Filtered store preview
-  const previewProducts = products
+  // Filtered store preview with safe checks
+  const previewProducts = (Array.isArray(products) ? products : [])
     .filter((p) => {
+      if (!p) return false;
       if (storeFilter === 'CASH') return p.paymentType === 'CASH';
       if (storeFilter === 'POINTS') return p.paymentType === 'POINTS';
       return true;
     })
-    .slice(0, 4);
+    ?.slice(0, 4) || [];
 
   // Reviews from real users / partners
   const reviews = [
@@ -251,7 +252,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {services.slice(0, 3).map((srv) => (
+          {(Array.isArray(services) ? services : []).slice(0, 3).map((srv) => (
             <div
               key={srv.id}
               className="p-6 rounded-2xl bg-[#0c101d] border border-slate-800 hover:border-sky-500/30 transition-all flex flex-col justify-between text-right group"
@@ -336,7 +337,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             >
               <div className="relative aspect-square w-full bg-slate-900 overflow-hidden">
                 <img
-                  src={p.images[0]}
+                  src={p.images?.[0] || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80'}
                   alt={p.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />

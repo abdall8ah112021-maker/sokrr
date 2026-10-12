@@ -298,7 +298,7 @@ export const SupportPage: React.FC<SupportPageProps> = ({ setCurrentTab, initial
 
               {/* Message Thread */}
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                {selectedTicket.messages.map((m) => (
+                {(selectedTicket.messages || []).map((m) => (
                   <div
                     key={m.id}
                     className={`p-3 rounded-2xl ${
@@ -333,10 +333,10 @@ export const SupportPage: React.FC<SupportPageProps> = ({ setCurrentTab, initial
             </div>
           ) : (
             <div className="divide-y divide-slate-800/80">
-              {tickets.length === 0 ? (
+              {(!tickets || tickets.length === 0) ? (
                 <p className="text-xs text-slate-500 py-8 text-center">لا توجد تذاكر دعم مسجلة حتى الآن.</p>
               ) : (
-                tickets.map((t) => (
+                (tickets || []).map((t) => (
                   <div
                     key={t.id}
                     onClick={() => setSelectedTicket(t)}

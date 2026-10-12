@@ -156,7 +156,7 @@ export const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ orderId, set
         <div className="space-y-3 pt-4 border-t border-slate-800">
           <h3 className="text-sm font-bold text-white">المنتجات المطلوبة (لقطة تاريخية غير قابلة للتعديل)</h3>
           <div className="divide-y divide-slate-800/60">
-            {order.items.map((item, idx) => (
+            {(order.items || []).map((item, idx) => (
               <div key={idx} className="py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {item.productImage && (

@@ -48,12 +48,14 @@ export const BusinessDashboardPage: React.FC = () => {
 
   useEffect(() => {
     if (user?.role === 'BUSINESS') {
-      api.getMyEmployees().then(setEmployees).catch(() => {});
+      api.getMyEmployees().then((res) => setEmployees(Array.isArray(res) ? res : [])).catch(() => setEmployees([]));
       api.getActiveOffers().then((list: any[]) => {
-        if (business) {
-          setOffers(list.filter((o: any) => o.businessId === business.id));
+        if (business && Array.isArray(list)) {
+          setOffers(list.filter((o: any) => o && o.businessId === business.id));
+        } else {
+          setOffers([]);
         }
-      }).catch(() => {});
+      }).catch(() => setOffers([]));
     }
   }, [user, business]);
 

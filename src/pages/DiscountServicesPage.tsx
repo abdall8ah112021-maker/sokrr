@@ -28,14 +28,14 @@ export const DiscountServicesPage: React.FC<DiscountServicesPageProps> = ({ setC
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getGovernorates().then(setGovernorates).catch(() => {});
+    api.getGovernorates().then((res) => setGovernorates(Array.isArray(res) ? res : [])).catch(() => setGovernorates([]));
     loadServices(selectedGov);
   }, [selectedGov]);
 
   const loadServices = (govId: string) => {
     api.getDiscountServices(govId)
-      .then(setServices)
-      .catch(() => {});
+      .then((res) => setServices(Array.isArray(res) ? res : []))
+      .catch(() => setServices([]));
   };
 
   // Check if logged in as customer
