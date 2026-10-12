@@ -27,6 +27,7 @@ enum AccountStatus {
   PENDING
   REQUIRES_CHANGES
   ACTIVE
+  APPROVED
   REJECTED
   SUSPENDED
 }
@@ -147,7 +148,7 @@ model User {
   email               String?        @unique
   passwordHash        String
   role                UserRole       @default(CUSTOMER)
-  status              AccountStatus  @default(PENDING)
+  status              String         @default("PENDING")
   failedLoginAttempts Int            @default(0)
   lockoutUntil        DateTime?
   lastLoginAt         DateTime?

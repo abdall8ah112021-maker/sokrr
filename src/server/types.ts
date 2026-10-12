@@ -2,7 +2,7 @@
 
 export type UserRole = 'CUSTOMER' | 'BUSINESS' | 'EMPLOYEE' | 'ADMIN' | 'SUPER_ADMIN';
 
-export type AccountStatus = 'PENDING' | 'REQUIRES_CHANGES' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED';
+export type AccountStatus = 'PENDING' | 'REQUIRES_CHANGES' | 'ACTIVE' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
 
 export type CardStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'BLOCKED' | 'EXPIRED';
 

@@ -23,17 +23,9 @@ app.use((req, res, next) => {
 // Authentication middleware for populating req.user
 app.use(authenticate);
 
-// Mount API v1 router
+// Mount API routers
+app.use('/api', apiRouter);
 app.use('/api/v1', apiRouter);
-
-// Forward compatibility /api redirect
-app.use('/api', (req, res, next) => {
-  if (req.url === '' || req.url === '/') {
-    res.json({ message: 'Sugar Business API v1. Use /api/v1' });
-    return;
-  }
-  next();
-});
 
 async function startServer() {
   if (!isProd) {

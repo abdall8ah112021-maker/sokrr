@@ -1,6 +1,6 @@
 // Sugar Business API Client
-
-const API_BASE = '/api/v1';
+// Dynamic relative API Base URL that adapts automatically to production URL (Vercel, Render) and dev
+const API_BASE = '/api';
 
 export class ApiError extends Error {
   code: string;
@@ -224,6 +224,11 @@ export const api = {
   // Admin
   getAdminMetrics: () => apiRequest('/admin/metrics'),
   getAdminCustomers: () => apiRequest('/admin/customers'),
+  getPendingApprovals: () => apiRequest('/admin/approvals'),
+  approveUser: (id: string, notes?: string) =>
+    apiRequest(`/admin/approvals/${id}/approve`, { method: 'POST', body: JSON.stringify({ notes }) }),
+  rejectUser: (id: string, reason?: string) =>
+    apiRequest(`/admin/approvals/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
   updateCustomerStatus: (userId: string, status: string, reason?: string) =>
     apiRequest(`/admin/customers/${userId}/status`, { method: 'PUT', body: JSON.stringify({ status, reason }) }),
   deleteCustomer: (userId: string) =>

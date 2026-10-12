@@ -1056,11 +1056,143 @@ class SugarDatabase {
 
   getAllCustomers(): Array<CustomerEntity & { user: UserEntity; card?: CardEntity; pointAccount?: PointAccountEntity }> {
     return this.data.customers.map((c) => {
-      const user = this.findUserById(c.userId)!;
+      const user = this.findUserById(c.userId) || {
+        id: c.userId,
+        phone: 'غير متوفر',
+        passwordHash: '',
+        role: 'CUSTOMER' as const,
+        status: 'ACTIVE' as const,
+        failedLoginAttempts: 0,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      };
       const card = this.data.cards.find((card) => card.customerId === c.id);
       const pointAccount = this.data.pointAccounts.find((p) => p.customerId === c.id);
       return { ...c, user, card, pointAccount };
     });
+  }
+
+  getPendingApprovals() {
+    const pendingCustomers = this.data.customers
+      .filter((c) => {
+        const u = this.findUserById(c.userId);
+        return u && (u.status === 'PENDING' || u.status === 'REQUIRES_CHANGES');
+      })
+      .map((c) => {
+        const user = this.findUserById(c.userId)!;
+        const card = this.data.cards.find((card) => card.customerId === c.id);
+        return { ...c, user, card };
+      });
+
+    const pendingBusinesses = this.data.businesses
+      .filter((b) => {
+        const u = this.findUserById(b.userId);
+        return (u && u.status === 'PENDING') || b.status === 'PENDING';
+      })
+      .map((b) => {
+        const user = this.findUserById(b.userId)!;
+        return { ...b, user };
+      });
+
+    return {
+      customers: pendingCustomers,
+      businesses: pendingBusinesses,
+      totalPending: pendingCustomers.length + pendingBusinesses.length,
+    };
+  }
+
+  approveUser(userIdOrCustomerId: string, notes?: string, actorId?: string): { user: UserEntity; card?: CardEntity } {
+    let user = this.findUserById(userIdOrCustomerId);
+    let customer: CustomerEntity | undefined;
+    if (!user) {
+      customer = this.findCustomerById(userIdOrCustomerId);
+      if (customer) user = this.findUserById(customer.userId);
+    } else {
+      customer = this.findCustomerByUserId(user.id);
+    }
+
+    if (!user) {
+      throw new Error('المستخدم غير موجود');
+    }
+
+    user.status = 'APPROVED';
+    this.persist();
+
+    let card: CardEntity | undefined;
+    if (customer) {
+      const existingCard = this.findCardByCustomerId(customer.id);
+      if (!existingCard) {
+        card = this.issueCard({
+          customerId: customer.id,
+          notes: notes || 'تم تفعيل وإصدار الكارت بعد موافقة الإدارة',
+          actorId: actorId || 'admin',
+        });
+      } else {
+        existingCard.status = 'ACTIVE';
+        card = existingCard;
+        this.persist();
+      }
+
+      this.createNotification({
+        userId: user.id,
+        title: 'تمت الموافقة على طلبك بنجاح!',
+        message: 'تمت الموافقة على طلبك وتفعيل كارتك الذكي بنجاح. يمكنك الآن استعراض كارتك واستخدامه في كافة المتاجر المعتمدة.',
+        type: 'CARD_REQUEST',
+        priority: 'HIGH',
+        deepLink: '/card',
+      });
+    }
+
+    this.recordAuditLog({
+      actorId: actorId || 'admin',
+      actorRole: 'ADMIN',
+      action: 'USER_APPROVED',
+      entity: 'USER',
+      entityId: user.id,
+      reason: notes || 'موافقة وتفعيل الحساب وإصدار الكارت',
+    });
+
+    return { user, card };
+  }
+
+  rejectUser(userIdOrCustomerId: string, reason?: string, actorId?: string): UserEntity {
+    let user = this.findUserById(userIdOrCustomerId);
+    let customer: CustomerEntity | undefined;
+    if (!user) {
+      customer = this.findCustomerById(userIdOrCustomerId);
+      if (customer) user = this.findUserById(customer.userId);
+    } else {
+      customer = this.findCustomerByUserId(user.id);
+    }
+
+    if (!user) {
+      throw new Error('المستخدم غير موجود');
+    }
+
+    user.status = 'REJECTED';
+    if (customer) {
+      customer.rejectionReason = reason || 'تم رفض الطلب بواسطة الإدارة';
+    }
+    this.persist();
+
+    this.createNotification({
+      userId: user.id,
+      title: 'تحديث بشأن طلب العضوية',
+      message: reason || 'نعتذر، لم تتم الموافقة على طلب التسجيل الخاص بك. يرجى مراجعة خدمة العملاء.',
+      type: 'ADMIN_ALERT',
+      priority: 'HIGH',
+    });
+
+    this.recordAuditLog({
+      actorId: actorId || 'admin',
+      actorRole: 'ADMIN',
+      action: 'USER_REJECTED',
+      entity: 'USER',
+      entityId: user.id,
+      reason: reason || 'رفض طلب التسجيل',
+    });
+
+    return user;
   }
 
   // ----------------------------------------------------

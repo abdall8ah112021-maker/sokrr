@@ -22,13 +22,22 @@ export const RegisterCustomerPage: React.FC<RegisterCustomerPageProps> = ({ setC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate Egyptian Phone Number: 010, 011, 012, 015 followed by 8 digits (11 digits total)
+    const EGYPT_PHONE_REGEX = /^01[0125]\d{8}$/;
+    const cleanPhone = phone.trim();
+    if (!EGYPT_PHONE_REGEX.test(cleanPhone)) {
+      setError('يجب إدخال رقم هاتف مصري صحيح مكون من 11 رقماً يبدأ بـ (010 أو 011 أو 012 أو 015)');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await registerCustomer({
         fullName,
-        phone,
-        email: email || undefined,
+        phone: cleanPhone,
+        email: email.trim() || undefined,
         password,
         governorate,
         city,
@@ -36,11 +45,11 @@ export const RegisterCustomerPage: React.FC<RegisterCustomerPageProps> = ({ setC
       });
       setSuccessData({
         fullName,
-        phone,
+        phone: cleanPhone,
         governorate,
       });
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة مجدداً');
+      setError(err.message || 'حدث خطأ أثناء إرسال طلب التسجيل');
     } finally {
       setLoading(false);
     }
@@ -49,14 +58,17 @@ export const RegisterCustomerPage: React.FC<RegisterCustomerPageProps> = ({ setC
   if (successData) {
     return (
       <div className="max-w-md mx-auto py-12 px-4 text-right">
-        <div className="p-8 rounded-3xl bg-[#0c101c] border border-sky-500/40 shadow-2xl text-center space-y-5">
-          <div className="w-16 h-16 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 mx-auto flex items-center justify-center">
+        <div className="p-8 rounded-3xl bg-[#0c101c] border border-amber-500/40 shadow-2xl text-center space-y-5">
+          <div className="w-16 h-16 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-400 mx-auto flex items-center justify-center">
             <CheckCircle2 className="w-8 h-8" />
           </div>
 
-          <h2 className="text-2xl font-black text-white">تم إنشاء حسابك بنجاح!</h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            أهلاً بك يا <span className="text-sky-300 font-bold">{successData.fullName}</span> في Sugar Business. تم إصدار كارتك البلاستيكي الذكي الأول وهو متاح الآن في محفظتك.
+          <h2 className="text-2xl font-black text-white">تم استلام طلبك بنجاح!</h2>
+          <p className="text-sm text-amber-200 font-bold leading-relaxed p-3 rounded-2xl bg-amber-950/40 border border-amber-500/30">
+            تم إرسال طلبك للمسؤول، يرجى انتظار الموافقة لتفعيل كارتك
+          </p>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            أهلاً بك يا <span className="text-sky-300 font-bold">{successData.fullName}</span> في Sugar Business. تم تسجيل بياناتك بنجاح وحسابك الآن قيد المراجعة والاعتماد من قبل إدارة المنظومة.
           </p>
 
           <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400 space-y-1.5 text-right">
@@ -69,19 +81,28 @@ export const RegisterCustomerPage: React.FC<RegisterCustomerPageProps> = ({ setC
               <span className="text-white">{successData.governorate}</span>
             </div>
             <div className="flex justify-between">
-              <span>حالة الكارت:</span>
-              <span className="text-emerald-400 font-bold">نشط ومفعل</span>
+              <span>حالة الطلب:</span>
+              <span className="text-amber-400 font-bold">معلق (قيد موافقة الأدمن)</span>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setCurrentTab('card')}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-400 to-cyan-300 hover:from-sky-300 hover:to-cyan-200 text-slate-950 font-bold text-sm shadow-xl shadow-sky-500/25 transition-all flex items-center justify-center gap-2"
-          >
-            <CreditCard className="w-5 h-5 text-slate-950" />
-            <span>استعراض كارتي ورمز الـ QR</span>
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentTab('home')}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-400 to-cyan-300 hover:from-sky-300 hover:to-cyan-200 text-slate-950 font-bold text-sm shadow-xl shadow-sky-500/25 transition-all flex items-center justify-center gap-2"
+            >
+              <span>العودة للرئيسية وتصفح العروض والخدمات</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentTab('card')}
+              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700 transition-all flex items-center justify-center gap-2"
+            >
+              <CreditCard className="w-4 h-4 text-sky-400" />
+              <span>متابعة حالة الكارت</span>
+            </button>
+          </div>
         </div>
       </div>
     );

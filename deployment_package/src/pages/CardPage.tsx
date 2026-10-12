@@ -19,15 +19,17 @@ interface CardPageProps {
 }
 
 export const CardPage: React.FC<CardPageProps> = ({ setCurrentTab }) => {
-  const { card, customer, pointAccount } = useAuth();
+  const { user, card, customer, pointAccount } = useAuth();
   const [replacementRequested, setReplacementRequested] = useState(false);
+
+  const isPending = user?.status === 'PENDING' || !card;
 
   const handleRequestReplacement = () => {
     setReplacementRequested(true);
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4 space-y-10 text-right">
+    <div className="max-w-4xl mx-auto py-10 px-4 space-y-8 text-right">
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-sky-950/70 border border-sky-400/30 text-sky-400 text-xs font-semibold">
           <Sparkles className="w-3.5 h-3.5" />
@@ -39,10 +41,22 @@ export const CardPage: React.FC<CardPageProps> = ({ setCurrentTab }) => {
         </p>
       </div>
 
+      {isPending && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-950/50 border border-amber-500/40 text-right space-y-1">
+          <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <span>تم إرسال طلبك للمسؤول، يرجى انتظار الموافقة لتفعيل كارتك</span>
+          </div>
+          <p className="text-xs text-amber-200/80 mr-7">
+            طلبك قيد المراجعة من قبل إدارة المنظومة. سيتم إصدار وتفعيل كارتك تلقائياً فور مراجعة البيانات واعتمادها.
+          </p>
+        </div>
+      )}
+
       {/* 3D Interactive Card Showcase */}
       <div className="flex flex-col items-center">
         <div className="w-full max-w-lg p-6 sm:p-10 rounded-3xl bg-[#0c111e] border border-sky-500/20 shadow-2xl flex flex-col items-center">
-          <Card3D card={card} customer={customer} pointsBalance={pointAccount?.balance} />
+          <Card3D card={card} customer={customer} pointsBalance={pointAccount?.balance || 0} />
         </div>
       </div>
 
@@ -50,9 +64,18 @@ export const CardPage: React.FC<CardPageProps> = ({ setCurrentTab }) => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 rounded-2xl bg-[#0b0f1b] border border-slate-800 space-y-1">
           <span className="text-xs text-slate-400">حالة الكارت</span>
-          <p className="text-base font-bold text-emerald-400 flex items-center gap-1.5">
-            <CheckCircle className="w-4 h-4" />
-            <span>نشط وصالح للشراء</span>
+          <p className={`text-base font-bold flex items-center gap-1.5 ${isPending ? 'text-amber-400' : 'text-emerald-400'}`}>
+            {isPending ? (
+              <>
+                <AlertTriangle className="w-4 h-4" />
+                <span>قيد المراجعة (معلق)</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                <span>نشط وصالح للشراء</span>
+              </>
+            )}
           </p>
         </div>
 

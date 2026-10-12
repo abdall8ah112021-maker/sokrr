@@ -25,14 +25,22 @@ export const RegisterBusinessPage: React.FC<RegisterBusinessPageProps> = ({ setC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const EGYPT_PHONE_REGEX = /^01[0125]\d{8}$/;
+    const cleanPhone = phone.trim();
+    if (!EGYPT_PHONE_REGEX.test(cleanPhone)) {
+      setError('يجب إدخال رقم هاتف مصري صحيح مكون من 11 رقماً يبدأ بـ (010 أو 011 أو 012 أو 015)');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await api.registerBusiness({
         businessName,
         ownerName,
-        phone,
-        email,
+        phone: cleanPhone,
+        email: email.trim() || undefined,
         password,
         governorate,
         city,

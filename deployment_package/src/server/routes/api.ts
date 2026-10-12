@@ -15,6 +15,9 @@ import { Permissions, ApiResponse } from '../types';
 
 export const apiRouter = Router();
 
+// Egyptian Phone Validation Regex (010, 011, 012, 015 followed by 8 digits = 11 digits total)
+const EGYPT_PHONE_REGEX = /^01[0125]\d{8}$/;
+
 // ----------------------------------------------------
 // AUTHENTICATION & IDENTITY
 // ----------------------------------------------------
@@ -29,22 +32,37 @@ apiRouter.post('/auth/register-customer', (req, res) => {
     return;
   }
 
-  const existing = db.findUserByPhone(phone);
-  if (existing) {
-    res.status(409).json({
+  const cleanPhone = String(phone).trim();
+  if (!EGYPT_PHONE_REGEX.test(cleanPhone)) {
+    res.status(400).json({
       success: false,
-      error: { code: 'PHONE_EXISTS', message: 'رقم الهاتف مسجل بالفعل مسبقاً' },
+      error: {
+        code: 'INVALID_PHONE',
+        message: 'يجب إدخال رقم هاتف مصري صحيح مكون من 11 رقماً يبدأ بـ (010 أو 011 أو 012 أو 015)',
+      },
     });
     return;
   }
 
+  const existing = db.findUserByPhone(cleanPhone);
+  if (existing) {
+    res.status(409).json({
+      success: false,
+      error: { code: 'PHONE_EXISTS', message: 'هذا الرقم مسجل بالفعل' },
+    });
+    return;
+  }
+
+  // Email is completely optional
+  const cleanEmail = email && typeof email === 'string' && email.trim().length > 0 ? email.trim() : undefined;
+
   const passwordHash = hashPassword(password);
   const user = db.createUser({
-    phone,
-    email: email || undefined,
+    phone: cleanPhone,
+    email: cleanEmail,
     passwordHash,
     role: 'CUSTOMER',
-    status: 'ACTIVE', // Active customer account, can order physical card
+    status: 'PENDING', // Saved as PENDING, card is not issued immediately
   });
 
   const customer = db.createCustomer({
@@ -55,13 +73,6 @@ apiRouter.post('/auth/register-customer', (req, res) => {
     address,
   });
 
-  // Automatically issue physical card for new customer
-  const card = db.issueCard({
-    customerId: customer.id,
-    notes: 'تم الإصدار الأولي عند إنشاء الحساب',
-    actorId: user.id,
-  });
-
   const accessToken = generateAccessToken(user);
   const { token: refreshToken } = generateRefreshToken(user);
 
@@ -70,10 +81,10 @@ apiRouter.post('/auth/register-customer', (req, res) => {
     data: {
       user: { id: user.id, phone: user.phone, role: user.role, status: user.status },
       customer,
-      card,
+      card: null,
       accessToken,
       refreshToken,
-      message: 'تم إنشاء حسابك بنجاح وإصدار كارتك البلاستيكي الذكي الأول!',
+      message: 'تم إرسال طلبك للمسؤول، يرجى انتظار الموافقة لتفعيل كارتك',
     },
   });
 });
@@ -89,19 +100,34 @@ apiRouter.post('/auth/register-business', (req, res) => {
     return;
   }
 
-  const existing = db.findUserByPhone(phone);
-  if (existing) {
-    res.status(409).json({
+  const cleanPhone = String(phone).trim();
+  if (!EGYPT_PHONE_REGEX.test(cleanPhone)) {
+    res.status(400).json({
       success: false,
-      error: { code: 'PHONE_EXISTS', message: 'رقم الهاتف مسجل مسبقاً' },
+      error: {
+        code: 'INVALID_PHONE',
+        message: 'يجب إدخال رقم هاتف مصري صحيح مكون من 11 رقماً يبدأ بـ (010 أو 011 أو 012 أو 015)',
+      },
     });
     return;
   }
 
+  const existing = db.findUserByPhone(cleanPhone);
+  if (existing) {
+    res.status(409).json({
+      success: false,
+      error: { code: 'PHONE_EXISTS', message: 'هذا الرقم مسجل بالفعل' },
+    });
+    return;
+  }
+
+  // Email is optional
+  const cleanEmail = email && typeof email === 'string' && email.trim().length > 0 ? email.trim() : undefined;
+
   const passwordHash = hashPassword(password);
   const user = db.createUser({
-    phone,
-    email: email || undefined,
+    phone: cleanPhone,
+    email: cleanEmail,
     passwordHash,
     role: 'BUSINESS',
     status: 'PENDING', // Businesses require admin approval
@@ -1105,6 +1131,61 @@ apiRouter.get('/admin/metrics', requirePermission(Permissions.REPORTS_VIEW), (re
 apiRouter.get('/admin/customers', requirePermission(Permissions.CUSTOMERS_READ), (req, res) => {
   const customers = db.getAllCustomers();
   res.json({ success: true, data: customers });
+});
+
+// ----------------------------------------------------
+// ADMIN APPROVAL SYSTEM (Cards & Users)
+// ----------------------------------------------------
+apiRouter.get('/admin/approvals', requirePermission(Permissions.CUSTOMERS_APPROVE), (req, res) => {
+  try {
+    const data = db.getPendingApprovals();
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+});
+
+apiRouter.post('/admin/approvals/:id/approve', requirePermission(Permissions.CUSTOMERS_APPROVE), (req: AuthenticatedRequest, res) => {
+  try {
+    const { notes } = req.body || {};
+    const result = db.approveUser(req.params.id, notes, req.user?.id);
+    res.json({
+      success: true,
+      data: result,
+      message: 'تمت الموافقة على الطلب بنجاح وتفعيل الكارت وإصداره',
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: { code: 'APPROVAL_ERROR', message: err.message } });
+  }
+});
+
+apiRouter.post('/admin/approvals/:id/reject', requirePermission(Permissions.CUSTOMERS_APPROVE), (req: AuthenticatedRequest, res) => {
+  try {
+    const { reason } = req.body || {};
+    const user = db.rejectUser(req.params.id, reason, req.user?.id);
+    res.json({
+      success: true,
+      data: { user },
+      message: 'تم رفض الطلب بنجاح',
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: { code: 'REJECTION_ERROR', message: err.message } });
+  }
+});
+
+apiRouter.post('/admin/approvals/:id/action', requirePermission(Permissions.CUSTOMERS_APPROVE), (req: AuthenticatedRequest, res) => {
+  try {
+    const { action, notes, reason } = req.body || {};
+    if (action === 'APPROVE') {
+      const result = db.approveUser(req.params.id, notes, req.user?.id);
+      res.json({ success: true, data: result, message: 'تمت الموافقة على الطلب بنجاح وتفعيل الكارت وإصداره' });
+    } else {
+      const user = db.rejectUser(req.params.id, reason, req.user?.id);
+      res.json({ success: true, data: { user }, message: 'تم رفض الطلب' });
+    }
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: { code: 'ACTION_ERROR', message: err.message } });
+  }
 });
 
 apiRouter.get('/admin/audit-logs', requirePermission(Permissions.AUDIT_READ), (req, res) => {

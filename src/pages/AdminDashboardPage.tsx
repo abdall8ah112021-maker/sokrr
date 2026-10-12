@@ -130,6 +130,29 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
+  // Customer approval/rejection (#10)
+  const handleApproveCustomer = async (userId: string) => {
+    try {
+      await api.approveUser(userId, 'تمت الموافقة وتفعيل الكارت بواسطة الأدمن');
+      alert('تمت الموافقة على الطلب بنجاح وتفعيل الكارت وإصداره للعميل!');
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'حدث خطأ أثناء اعتماد الطلب');
+    }
+  };
+
+  const handleRejectCustomer = async (userId: string) => {
+    const reason = window.prompt('سبب رفض الطلب (اختياري):', 'بيانات غير مكتملة أو غير مطابقة');
+    if (reason === null) return;
+    try {
+      await api.rejectUser(userId, reason || 'تم الرفض بواسطة الإدارة');
+      alert('تم رفض الطلب بنجاح وتحديث حالة الحساب إلى REJECTED.');
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'حدث خطأ أثناء رفض الطلب');
+    }
+  };
+
   // Business approval/rejection
   const handleBusinessStatus = async (id: string, status: string, isListed: boolean) => {
     try {
@@ -1063,47 +1086,114 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* ================= TAB 2: APPROVALS ================= */}
       {activeTab === 'approvals' && (
-        <div className="p-6 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl space-y-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
-            <CheckCircle className="w-4 h-4 text-sky-400" />
-            <span>طلبات انضمام الأنشطة التجارية والمتاجر</span>
-          </h3>
+        <div className="space-y-6">
+          {/* Section 1: Customer Card & Membership Approvals */}
+          <div className="p-6 rounded-3xl bg-[#0b0f1b] border border-sky-500/30 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-sky-400" />
+                <span>طلبات تسجيل العملاء وإصدار الكروت الذكية المعلقة (Customer Approvals)</span>
+              </h3>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/40 text-amber-300 font-bold">
+                {customers.filter((c) => c.user?.status === 'PENDING').length} طلب معلق
+              </span>
+            </div>
 
-          <div className="divide-y divide-slate-800/80">
-            {businesses.filter((b) => b.status === 'PENDING').length === 0 ? (
-              <p className="text-xs text-slate-500 py-6 text-center">لا توجد طلبات معلقة بانتظار المراجعة حالياً.</p>
-            ) : (
-              businesses
-                .filter((b) => b.status === 'PENDING')
-                .map((b) => (
-                  <div key={b.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h4 className="font-bold text-white text-sm">{b.businessName}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        المسؤول: {b.ownerName} • هاتف: <span className="font-mono">{b.phone}</span> • {b.governorate}، {b.city}
-                      </p>
+            <div className="divide-y divide-slate-800/80">
+              {customers.filter((c) => c.user?.status === 'PENDING').length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto" />
+                  <p className="text-xs text-slate-400">لا توجد طلبات عملاء معلقة حالياً، جميع الكروت معتمدة ومفعلة.</p>
+                </div>
+              ) : (
+                customers
+                  .filter((c) => c.user?.status === 'PENDING')
+                  .map((c) => (
+                    <div key={c.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-900/30 px-3 rounded-2xl transition-colors">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-white text-sm">{c.fullName}</h4>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-500/30 font-semibold">
+                            معلق - بانتظار إصدار الكارت
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1 space-x-2 space-x-reverse">
+                          <span>الهاتف: <strong className="font-mono text-sky-300">{c.user?.phone}</strong></span>
+                          <span>•</span>
+                          <span>البريد: <span className="font-mono text-slate-300">{c.user?.email || 'لم يُحدد (اختياري)'}</span></span>
+                          <span>•</span>
+                          <span>{c.governorate}، {c.city}</span>
+                          {c.address && <span>• العنوان: {c.address}</span>}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleApproveCustomer(c.userId)}
+                          className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 text-slate-950" />
+                          <span>قبول الطلب وتفعيل الكارت</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectCustomer(c.userId)}
+                          className="py-2 px-3.5 rounded-xl bg-rose-950/80 text-rose-300 hover:bg-rose-900 border border-rose-500/40 text-xs font-semibold transition-all flex items-center gap-1.5"
+                        >
+                          <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                          <span>رفض الطلب</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleBusinessStatus(b.id, 'ACTIVE', true)}
-                        className="py-1.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        <span>موافقة وإدراج في الدليل</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleBusinessStatus(b.id, 'REJECTED', false)}
-                        className="py-1.5 px-3 rounded-lg bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-500/30 text-xs transition-colors flex items-center gap-1"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                        <span>رفض</span>
-                      </button>
+                  ))
+              )}
+            </div>
+          </div>
+
+          {/* Section 2: Business Partner Requests */}
+          <div className="p-6 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
+              <Store className="w-4 h-4 text-amber-400" />
+              <span>طلبات انضمام الأنشطة التجارية والمتاجر (Business Approvals)</span>
+            </h3>
+
+            <div className="divide-y divide-slate-800/80">
+              {businesses.filter((b) => b.status === 'PENDING').length === 0 ? (
+                <p className="text-xs text-slate-500 py-6 text-center">لا توجد طلبات متاجر معلقة بانتظار المراجعة حالياً.</p>
+              ) : (
+                businesses
+                  .filter((b) => b.status === 'PENDING')
+                  .map((b) => (
+                    <div key={b.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h4 className="font-bold text-white text-sm">{b.businessName}</h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          المسؤول: {b.ownerName} • هاتف: <span className="font-mono">{b.phone}</span> • {b.governorate}، {b.city}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleBusinessStatus(b.id, 'ACTIVE', true)}
+                          className="py-1.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>موافقة وإدراج في الدليل</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleBusinessStatus(b.id, 'REJECTED', false)}
+                          className="py-1.5 px-3 rounded-lg bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-500/30 text-xs transition-colors flex items-center gap-1"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>رفض</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
-            )}
+                  ))
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1126,23 +1216,66 @@ export const AdminDashboardPage: React.FC = () => {
                   <th className="pb-3">رقم الكارت</th>
                   <th className="pb-3">رصيد النقاط</th>
                   <th className="pb-3">حالة الحساب</th>
+                  <th className="pb-3">إجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {customers.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-900/40 transition-colors">
-                    <td className="py-3 pr-2 font-bold text-white">{c.fullName}</td>
-                    <td className="py-3 font-mono text-slate-300">{c.user.phone}</td>
-                    <td className="py-3 text-slate-300">{c.governorate}</td>
-                    <td className="py-3 font-mono text-sky-400 font-semibold">{c.card?.cardNumber || 'لم يصدر'}</td>
-                    <td className="py-3 font-mono text-amber-400 font-bold">{c.pointAccount?.balance || 0} pt</td>
-                    <td className="py-3">
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/20">
-                        نشط
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {customers.map((c) => {
+                  const status = c.user?.status || 'PENDING';
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-3 pr-2 font-bold text-white">{c.fullName}</td>
+                      <td className="py-3 font-mono text-slate-300">{c.user?.phone || 'غير مسجل'}</td>
+                      <td className="py-3 text-slate-300">{c.governorate}</td>
+                      <td className="py-3 font-mono text-sky-400 font-semibold">{c.card?.cardNumber || 'لم يصدر'}</td>
+                      <td className="py-3 font-mono text-amber-400 font-bold">{c.pointAccount?.balance || 0} pt</td>
+                      <td className="py-3">
+                        {status === 'PENDING' && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-500/20 font-bold">
+                            معلق (بانتظار الموافقة)
+                          </span>
+                        )}
+                        {(status === 'APPROVED' || status === 'ACTIVE') && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/20 font-bold">
+                            معتمد ونشط
+                          </span>
+                        )}
+                        {status === 'REJECTED' && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-500/20 font-bold">
+                            مرفوض
+                          </span>
+                        )}
+                        {status === 'SUSPENDED' && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-bold">
+                            معلق مؤقتاً
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {status === 'PENDING' ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleApproveCustomer(c.userId)}
+                              className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-bold transition-all text-[11px]"
+                            >
+                              قبول وتفعيل
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRejectCustomer(c.userId)}
+                              className="px-2 py-1 rounded-lg bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white font-bold transition-all text-[11px]"
+                            >
+                              رفض
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-500">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
