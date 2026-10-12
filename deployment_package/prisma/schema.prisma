@@ -1,0 +1,787 @@
+// Sugar Business - Master Database Schema
+// Database: PostgreSQL
+// ORM: Prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ----------------------------------------------------
+// ENUMS
+// ----------------------------------------------------
+
+enum UserRole {
+  CUSTOMER
+  BUSINESS
+  EMPLOYEE
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AccountStatus {
+  PENDING
+  REQUIRES_CHANGES
+  ACTIVE
+  REJECTED
+  SUSPENDED
+}
+
+enum CardStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+  EXPIRED
+}
+
+enum CardAction {
+  ISSUE
+  ASSIGN
+  SUSPEND
+  BLOCK
+  REPLACE
+}
+
+enum PointLedgerType {
+  EARN
+  SPEND
+  EXPIRE
+  REVERSE
+  RESERVE
+  RELEASE
+  ADJUSTMENT
+}
+
+enum ServiceRequestStatus {
+  NEW
+  UNDER_REVIEW
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum OfferStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  STOPPED
+  EXPIRED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+  ARCHIVED
+}
+
+enum PaymentType {
+  CASH
+  POINTS
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum NotificationType {
+  POINTS_EARNED
+  POINTS_EXPIRY
+  CARD_EXPIRY
+  CARD_REQUEST
+  SERVICE_UPDATE
+  ORDER_STATUS
+  OFFER
+  NEWS
+  ADMIN_ALERT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SupportTicketStatus {
+  NEW
+  UNDER_REVIEW
+  WAITING_REPLY
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum AnnouncementPlacement {
+  TOP
+  IN_PAGE
+  HOMEPAGE
+  CUSTOMER_DASHBOARD
+  BUSINESS_DASHBOARD
+}
+
+// ----------------------------------------------------
+// USERS & IDENTITY
+// ----------------------------------------------------
+
+model User {
+  id                  String         @id @default(uuid())
+  phone               String         @unique
+  email               String?        @unique
+  passwordHash        String
+  role                UserRole       @default(CUSTOMER)
+  status              AccountStatus  @default(PENDING)
+  failedLoginAttempts Int            @default(0)
+  lockoutUntil        DateTime?
+  lastLoginAt         DateTime?
+  lastLoginIp         String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  customer            Customer?
+  business            Business?
+  employee            Employee?
+  refreshTokens       RefreshToken[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]     @relation("ActorAuditLogs")
+
+  @@index([phone])
+  @@index([role, status])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isRevoked Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ----------------------------------------------------
+// CUSTOMER & LOYALTY
+// ----------------------------------------------------
+
+model Customer {
+  id              String           @id @default(uuid())
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName        String
+  governorate     String
+  city            String
+  address         String?
+  referenceNumber String           @unique
+  rejectionReason String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  cards           Card[]
+  pointAccount    PointAccount?
+  orders          Order[]
+  serviceRequests ServiceRequest[]
+  favorites       Favorite[]
+  reviews         Review[]
+  supportTickets  SupportTicket[]
+  addresses       OrderAddress[]
+
+  @@index([governorate])
+  @@index([referenceNumber])
+}
+
+model PointAccount {
+  id                    String        @id @default(uuid())
+  customerId            String        @unique
+  customer              Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  balance               Int           @default(0)
+  totalEarnedHistorical Int           @default(0)
+  currentLevelId        String?
+  level                 LoyaltyLevel? @relation(fields: [currentLevelId], references: [id])
+  updatedAt             DateTime      @updatedAt
+
+  ledgerEntries         PointLedger[]
+
+  @@index([customerId])
+}
+
+model PointLedger {
+  id             String          @id @default(uuid())
+  pointAccountId String
+  pointAccount   PointAccount    @relation(fields: [pointAccountId], references: [id], onDelete: Cascade)
+  transactionId  String          @unique
+  type           PointLedgerType
+  points         Int
+  balanceAfter   Int
+  actorId        String
+  reason         String?
+  referenceId    String?
+  expiresAt      DateTime?
+  createdAt      DateTime        @default(now())
+
+  @@index([pointAccountId, createdAt])
+  @@index([transactionId])
+  @@index([type])
+}
+
+model LoyaltyLevel {
+  id            String         @id @default(uuid())
+  name          String
+  nameAr        String
+  minPoints     Int
+  colorHex      String
+  icon          String
+  downgradeDays Int            @default(365)
+  benefits      Json
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  accounts      PointAccount[]
+}
+
+// ----------------------------------------------------
+// CARDS & QR
+// ----------------------------------------------------
+
+model Card {
+  id           String        @id @default(uuid())
+  cardId       String        @unique
+  qrId         String        @unique
+  cardNumber   String        @unique
+  customerId   String
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  status       CardStatus    @default(ACTIVE)
+  issueDate    DateTime      @default(now())
+  expiryDate   DateTime
+  lastScanAt   DateTime?
+  notes        String?
+  designConfig Json?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  history      CardHistory[]
+  transactions Transaction[]
+
+  @@index([cardId])
+  @@index([qrId])
+  @@index([cardNumber])
+  @@index([customerId])
+}
+
+model CardHistory {
+  id        String     @id @default(uuid())
+  cardId    String
+  card      Card       @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  action    CardAction
+  reason    String?
+  actorId   String
+  metadata  Json?
+  createdAt DateTime   @default(now())
+
+  @@index([cardId])
+}
+
+// ----------------------------------------------------
+// BUSINESS & EMPLOYEES
+// ----------------------------------------------------
+
+model Business {
+  id              String           @id @default(uuid())
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName    String
+  ownerName       String
+  phone           String
+  email           String?
+  governorate     String
+  city            String
+  address         String
+  type            String
+  sectorId        String
+  sector          Sector           @relation(fields: [sectorId], references: [id])
+  description     String
+  logoUrl         String?
+  socialLinks     Json?
+  workingHours    Json?
+  documents       Json?
+  galleryImages   Json?
+  discountNote    String?
+  isListed        Boolean          @default(false)
+  ratingAvg       Float            @default(0)
+  ratingCount     Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  employees       Employee[]
+  offers          Offer[]
+  transactions    Transaction[]
+  serviceRequests ServiceRequest[]
+  reviews         Review[]
+  favorites       Favorite[]
+
+  @@index([governorate])
+  @@index([sectorId])
+  @@index([isListed])
+}
+
+model Employee {
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId   String
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String
+  email        String?
+  jobTitle     String
+  photoUrl     String?
+  notes        String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  transactions Transaction[]
+
+  @@index([businessId])
+}
+
+// ----------------------------------------------------
+// TRANSACTIONS & SCANNING
+// ----------------------------------------------------
+
+model Transaction {
+  id             String    @id @default(uuid())
+  transactionId  String    @unique
+  idempotencyKey String    @unique
+  cardId         String
+  card           Card      @relation(fields: [cardId], references: [id])
+  businessId     String
+  business       Business  @relation(fields: [businessId], references: [id])
+  employeeId     String?
+  employee       Employee? @relation(fields: [employeeId], references: [id])
+  amount         Float     @default(0)
+  pointsAwarded  Int       @default(10)
+  isReversed     Boolean   @default(false)
+  reversalReason String?
+  createdAt      DateTime  @default(now())
+
+  @@index([cardId])
+  @@index([businessId])
+  @@index([idempotencyKey])
+}
+
+// ----------------------------------------------------
+// SERVICES & SECTORS
+// ----------------------------------------------------
+
+model Sector {
+  id         String     @id @default(uuid())
+  name       String
+  nameAr     String
+  icon       String
+  businesses Business[]
+  services   Service[]
+}
+
+model Service {
+  id               String           @id @default(uuid())
+  name             String
+  nameAr           String
+  slug             String           @unique
+  icon             String
+  shortDescription String
+  fullDescription  String
+  targetAudience   String
+  sectorId         String
+  sector           Sector           @relation(fields: [sectorId], references: [id])
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  requests         ServiceRequest[]
+  offerServices    OfferService[]
+
+  @@index([sectorId])
+}
+
+model ServiceRequest {
+  id                 String               @id @default(uuid())
+  requestNumber      String               @unique
+  customerId         String
+  customer           Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  serviceId          String
+  service            Service              @relation(fields: [serviceId], references: [id])
+  businessId         String?
+  business           Business?            @relation(fields: [businessId], references: [id])
+  status             ServiceRequestStatus @default(NEW)
+  customerNotes      String?
+  adminNotes         String?
+  cancellationReason String?
+  rating             Int?
+  ratingComment      String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([customerId])
+  @@index([serviceId])
+  @@index([status])
+}
+
+// ----------------------------------------------------
+// OFFERS
+// ----------------------------------------------------
+
+model Offer {
+  id           String         @id @default(uuid())
+  businessId   String
+  business     Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title        String
+  description  String
+  discount     Float
+  discountType DiscountType
+  startDate    DateTime
+  endDate      DateTime
+  status       OfferStatus    @default(PENDING)
+  mainImage    String?
+  conditions   String?
+  rejectReason String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  services     OfferService[]
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model OfferService {
+  offerId   String
+  offer     Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([offerId, serviceId])
+}
+
+// ----------------------------------------------------
+// STORE & PRODUCTS & ORDERS
+// ----------------------------------------------------
+
+model ProductCategory {
+  id        String    @id @default(uuid())
+  nameAr    String
+  nameEn    String
+  slug      String    @unique
+  products  Product[]
+}
+
+model Product {
+  id                String          @id @default(uuid())
+  name              String
+  description       String
+  categoryId        String
+  category          ProductCategory @relation(fields: [categoryId], references: [id])
+  paymentType       PaymentType
+  cashPrice         Float           @default(0)
+  pointsPrice       Int             @default(0)
+  inventory         Int             @default(0)
+  lowStockThreshold Int             @default(5)
+  status            ProductStatus   @default(ACTIVE)
+  images            Json
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  reviews           Review[]
+  orderItems        OrderItem[]
+  favorites         Favorite[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([paymentType])
+}
+
+model OrderAddress {
+  id          String   @id @default(uuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  title       String
+  recipient   String
+  phone       String
+  governorate String
+  city        String
+  street      String
+  building    String?
+  isDefault   Boolean  @default(false)
+
+  @@index([customerId])
+}
+
+model Order {
+  id                 String       @id @default(uuid())
+  orderNumber        String       @unique
+  customerId         String
+  customer           Customer     @relation(fields: [customerId], references: [id])
+  paymentType        PaymentType
+  status             OrderStatus  @default(PENDING)
+  subtotalCash       Float        @default(0)
+  subtotalPoints     Int          @default(0)
+  deliveryFee        Float        @default(0)
+  totalCash          Float        @default(0)
+  totalPoints        Int          @default(0)
+  deliveryAddress    Json
+  cancellationReason String?
+  statusTimeline     Json
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  items              OrderItem[]
+
+  @@index([customerId])
+  @@index([orderNumber])
+  @@index([status])
+}
+
+model OrderItem {
+  id             String   @id @default(uuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  productName    String
+  productImage   String?
+  quantity       Int
+  unitPriceCash  Float    @default(0)
+  unitPricePoint Int      @default(0)
+
+  @@index([orderId])
+}
+
+// ----------------------------------------------------
+// NOTIFICATIONS & ANNOUNCEMENTS
+// ----------------------------------------------------
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotificationType
+  priority  Priority         @default(LOW)
+  isRead    Boolean          @default(false)
+  isHidden  Boolean          @default(false)
+  deepLink  String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead, isHidden])
+  @@index([createdAt])
+}
+
+model Announcement {
+  id             String                  @id @default(uuid())
+  title          String
+  content        String
+  imageUrl       String?
+  type           String                  @default("info")
+  targetAudience String                  @default("ALL")
+  placements     Json
+  isPinned       Boolean                 @default(false)
+  startDate      DateTime                @default(now())
+  endDate        DateTime?
+  status         String                  @default("PUBLISHED")
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+}
+
+// ----------------------------------------------------
+// NEWS & CMS
+// ----------------------------------------------------
+
+model News {
+  id          String        @id @default(uuid())
+  title       String
+  content     String
+  imageUrl    String?
+  category    String
+  author      String
+  status      String        @default("PUBLISHED")
+  publishDate DateTime      @default(now())
+  views       Int           @default(0)
+  likes       Int           @default(0)
+  tags        Json
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  comments    NewsComment[]
+
+  @@index([status])
+  @@index([publishDate])
+}
+
+model NewsComment {
+  id        String   @id @default(uuid())
+  newsId    String
+  news      News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  userName  String
+  comment   String
+  isApproved Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([newsId, isApproved])
+}
+
+model CMSPage {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  title     String
+  content   String
+  metaTitle String?
+  metaDesc  String?
+  version   Int      @default(1)
+  status    String   @default("PUBLISHED")
+  updatedAt DateTime @updatedAt
+}
+
+// ----------------------------------------------------
+// SUPPORT & FAQ
+// ----------------------------------------------------
+
+model SupportTicket {
+  id            String               @id @default(uuid())
+  ticketNumber  String               @unique
+  customerId    String?
+  customer      Customer?            @relation(fields: [customerId], references: [id])
+  name          String
+  phone         String
+  email         String?
+  subject       String
+  category      String
+  status        SupportTicketStatus  @default(NEW)
+  messages      Json
+  rating        Int?
+  ratingComment String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([ticketNumber])
+  @@index([customerId])
+  @@index([status])
+}
+
+model FAQ {
+  id        String   @id @default(uuid())
+  category  String
+  question  String
+  answer    String
+  order     Int      @default(0)
+  isVisible Boolean  @default(true)
+}
+
+// ----------------------------------------------------
+// FAVORITES & REVIEWS
+// ----------------------------------------------------
+
+model Favorite {
+  id         String    @id @default(uuid())
+  customerId String
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+
+  @@unique([customerId, businessId, productId])
+}
+
+model Review {
+  id          String    @id @default(uuid())
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  businessId  String?
+  business    Business? @relation(fields: [businessId], references: [id])
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id])
+  rating      Int
+  comment     String
+  status      String    @default("APPROVED") // PENDING, APPROVED, REJECTED
+  createdAt   DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([productId])
+}
+
+// ----------------------------------------------------
+// SETTINGS, AUDIT, JOBS, GOVERNORATES
+// ----------------------------------------------------
+
+model Setting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  category    String
+  type        String   @default("string")
+  description String
+  isSensitive Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String
+  actorRole String
+  action    String
+  entity    String
+  entityId  String?
+  ip        String?
+  before    Json?
+  after     Json?
+  reason    String?
+  timestamp DateTime @default(now())
+  user      User?    @relation("ActorAuditLogs", fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([action])
+  @@index([entity])
+  @@index([timestamp])
+}
+
+model Governorate {
+  id          String  @id @default(uuid())
+  nameAr      String  @unique
+  nameEn      String
+  available   Boolean @default(true)
+  deliveryFee Float   @default(45)
+}
+
+model JobRun {
+  id          String    @id @default(uuid())
+  jobName     String
+  status      String
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  durationMs  Int?
+  error       String?
+  metadata    Json?
+}
