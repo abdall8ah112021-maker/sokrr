@@ -11,7 +11,19 @@ const resolveApiBase = (): string => {
   ).trim().replace(/\/+$/, '');
 
   if (envUrl) {
-    // If user provided a backend domain (e.g. https://my-backend.onrender.com) without /api
+    // If user provided the generic root 'https://vercel.app' (which has no app subdomain)
+    // and this is running live in the user's browser, adapt to their live project origin
+    // so API calls don't 404 on Vercel's corporate landing page:
+    if (
+      (envUrl === 'https://vercel.app' || envUrl === 'http://vercel.app') &&
+      typeof window !== 'undefined' &&
+      window.location?.origin &&
+      !window.location.origin.includes('localhost')
+    ) {
+      return `${window.location.origin}/api`;
+    }
+
+    // If user provided a backend domain (e.g. https://my-app.vercel.app) without /api
     if (!envUrl.endsWith('/api') && !envUrl.endsWith('/api/v1')) {
       return `${envUrl}/api`;
     }
