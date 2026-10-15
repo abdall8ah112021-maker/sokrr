@@ -1,6 +1,49 @@
 // Sugar Business API Client
-// Dynamic relative API Base URL that adapts automatically to production URL (Vercel, Render) and dev
-const API_BASE = '/api';
+// Flexible & resilient API Base URL resolution:
+// 1. Reads VITE_API_BASE_URL (or VITE_BACKEND_URL / VITE_API_URL) from environment if defined (e.g. in Vercel project settings).
+// 2. Falls back to relative '/api' so Vercel rewrites (proxy) or same-domain servers work seamlessly without configuration.
+const resolveApiBase = (): string => {
+  const envUrl = (
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_BACKEND_URL ||
+    import.meta.env.VITE_API_URL ||
+    ''
+  ).trim().replace(/\/+$/, '');
+
+  if (envUrl) {
+    // If user provided a backend domain (e.g. https://my-backend.onrender.com) without /api
+    if (!envUrl.endsWith('/api') && !envUrl.endsWith('/api/v1')) {
+      return `${envUrl}/api`;
+    }
+    return envUrl;
+  }
+
+  return '/api';
+};
+
+export const API_BASE = resolveApiBase();
+
+/**
+ * Builds a clean, fully-qualified URL for any API endpoint.
+ * Prevents duplicate slashes, duplicate /api prefixes, and supports both /v1/... and regular endpoints.
+ */
+export function buildApiUrl(endpoint: string): string {
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  // If the endpoint already starts with /api (e.g. /api/v1/auth or /api/auth)
+  if (cleanEndpoint.startsWith('/api/') || cleanEndpoint === '/api') {
+    if (API_BASE.endsWith('/api')) {
+      const origin = API_BASE.slice(0, -4);
+      return `${origin}${cleanEndpoint}`;
+    }
+    if (API_BASE.endsWith('/api/v1') && cleanEndpoint.startsWith('/api/v1')) {
+      const origin = API_BASE.slice(0, -7);
+      return `${origin}${cleanEndpoint}`;
+    }
+  }
+
+  return `${API_BASE}${cleanEndpoint}`;
+}
 
 export class ApiError extends Error {
   code: string;
@@ -48,7 +91,9 @@ export async function apiRequest<T = any>(
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const url = buildApiUrl(endpoint);
+
+  const response = await fetch(url, {
     ...options,
     headers,
   });
@@ -58,7 +103,7 @@ export async function apiRequest<T = any>(
     const { refreshToken } = getStoredTokens();
     if (refreshToken) {
       try {
-        const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+        const refreshRes = await fetch(buildApiUrl('/auth/refresh'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken }),
@@ -68,7 +113,7 @@ export async function apiRequest<T = any>(
           setStoredTokens(refreshData.data.accessToken, refreshData.data.refreshToken);
           // Retry original request with new token
           headers.set('Authorization', `Bearer ${refreshData.data.accessToken}`);
-          const retryRes = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+          const retryRes = await fetch(url, { ...options, headers });
           const retryData = await retryRes.json();
           if (!retryData.success) {
             throw new ApiError(retryData.error?.message || 'حدث خطأ في استجابة الخادم', retryData.error?.code);
