@@ -29,6 +29,14 @@ app.use((req, res, next) => {
 // Authentication middleware
 app.use(authenticate);
 
+// Explicit health check endpoints
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString(), platform: 'vercel-serverless' });
+});
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString(), platform: 'vercel-serverless' });
+});
+
 // Mount API router
 app.use('/api', apiRouter);
 app.use('/api/v1', apiRouter);

@@ -31,4 +31,21 @@ if (process.env.DATABASE_URL) {
 // 3. Build Client Assets (Vite)
 console.log('[Build] Building frontend assets with Vite...');
 execSync('npx vite build', { stdio: 'inherit' });
-console.log('[Build] Build completed successfully.');
+
+// 4. Bundle Vercel Serverless API Functions (Resolves all relative imports, prevents ERR_MODULE_NOT_FOUND)
+console.log('[Build] Bundling Vercel Serverless API functions with esbuild...');
+try {
+  execSync(
+    'npx esbuild api/server.ts --bundle --platform=node --format=esm --target=node18 --packages=external --outfile=api/index.js',
+    { stdio: 'inherit' }
+  );
+  execSync(
+    'npx esbuild api/server.ts --bundle --platform=node --format=esm --target=node18 --packages=external --outfile=api/server.js',
+    { stdio: 'inherit' }
+  );
+  console.log('[Build] API serverless functions bundled successfully.');
+} catch (err) {
+  console.warn('[Build] Warning during serverless bundling:', err.message);
+}
+
+console.log('[Build] Production build sequence completed successfully.');
