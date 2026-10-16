@@ -9,8 +9,10 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 var SugarDatabase = class {
+  data;
+  filePath;
+  isLoaded = false;
   constructor() {
-    this.isLoaded = false;
     const dataDir = path.resolve(process.cwd(), ".data");
     if (!fs.existsSync(dataDir)) {
       try {

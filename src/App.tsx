@@ -9,6 +9,7 @@ import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { SmartFloatingButton } from './components/common/SmartFloatingButton';
 import { CookieConsent } from './components/common/CookieConsent';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -189,19 +190,23 @@ const queryClient = new QueryClient();
 
 export function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <CartProvider>
-          <ContentProvider>
-            <SettingsProvider>
-              <AdminDataProvider>
-                <AppContent />
-              </AdminDataProvider>
-            </SettingsProvider>
-          </ContentProvider>
-        </CartProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <CartProvider>
+            <ContentProvider>
+              <SettingsProvider>
+                <AdminDataProvider>
+                  <ErrorBoundary>
+                    <AppContent />
+                  </ErrorBoundary>
+                </AdminDataProvider>
+              </SettingsProvider>
+            </ContentProvider>
+          </CartProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
