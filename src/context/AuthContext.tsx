@@ -101,6 +101,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEmployee(null);
     setCard(null);
     setPointAccount(null);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('sugar:auth:logout'));
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   };
 
   const refreshProfile = async () => {

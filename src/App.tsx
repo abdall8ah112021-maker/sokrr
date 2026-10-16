@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -57,7 +57,43 @@ function AppContent() {
   const [selectedServiceId, setSelectedServiceId] = useState<string>('srv_01');
   const [selectedOrderId, setSelectedOrderId] = useState<string>('ord_01');
 
-  const { customer } = useAuth();
+  const { customer, user } = useAuth();
+
+  // 1. Scroll to top of the page on every navigation / page switch
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+  }, [currentTab, selectedBusinessId, selectedProductId, selectedServiceId, selectedOrderId]);
+
+  // 2. Return to Home page whenever logout is triggered
+  useEffect(() => {
+    const handleLogout = () => {
+      setCurrentTab('home');
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+
+    window.addEventListener('sugar:auth:logout', handleLogout);
+    return () => window.removeEventListener('sugar:auth:logout', handleLogout);
+  }, []);
+
+  // 3. Fallback: If user logs out while on a protected page, redirect back to Home
+  useEffect(() => {
+    if (!user && (
+      currentTab === 'customer-dashboard' ||
+      currentTab === 'business-dashboard' ||
+      currentTab === 'admin-dashboard' ||
+      currentTab === 'card' ||
+      currentTab === 'points' ||
+      currentTab === 'notifications'
+    )) {
+      setCurrentTab('home');
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [user, currentTab]);
+
   const renderContent = () => {
     switch (currentTab) {
       case 'home':

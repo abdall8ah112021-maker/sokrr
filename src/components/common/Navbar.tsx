@@ -219,7 +219,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab }) => 
                 </button>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => {
+                    logout();
+                    setCurrentTab('home');
+                    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                  }}
                   className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-colors"
                   title="تسجيل الخروج"
                 >
@@ -387,6 +391,21 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab }) => 
             >
               الدعم والمساعدة
             </button>
+            {user && (
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  setCurrentTab('home');
+                  setMobileMenuOpen(false);
+                  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                }}
+                className="w-full text-right px-3 py-2.5 rounded-lg text-sm text-rose-400 hover:bg-rose-950/40 flex items-center justify-between border-t border-slate-800/80 pt-3 mt-2 transition-colors"
+              >
+                <span>تسجيل الخروج</span>
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
       </div>
