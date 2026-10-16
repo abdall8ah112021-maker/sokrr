@@ -32,18 +32,31 @@ if (process.env.DATABASE_URL) {
 console.log('[Build] Building frontend assets with Vite...');
 execSync('npx vite build', { stdio: 'inherit' });
 
-// 4. Bundle Vercel Serverless API Functions (Resolves all relative imports, prevents ERR_MODULE_NOT_FOUND)
-console.log('[Build] Bundling Vercel Serverless API functions with esbuild...');
+// 4. Bundle Vercel Serverless API Function into a single, clean api/index.js handler
+console.log('[Build] Bundling Vercel Serverless API function (src/server/serverless.ts -> api/index.js)...');
 try {
+  // Ensure api directory exists and contains ONLY the canonical index.js handler
+  const fs = require('fs');
+  const path = require('path');
+  const apiDir = path.resolve(process.cwd(), 'api');
+  if (!fs.existsSync(apiDir)) {
+    fs.mkdirSync(apiDir, { recursive: true });
+  }
+
+  // Remove any obsolete duplicate files that cause [conflicting_file_path] in Vercel
+  const obsoleteFiles = ['server.ts', 'server.js', 'index.ts'];
+  for (const file of obsoleteFiles) {
+    const fullPath = path.join(apiDir, file);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  }
+
   execSync(
-    'npx esbuild api/server.ts --bundle --platform=node --format=esm --target=node18 --packages=external --outfile=api/index.js',
+    'npx esbuild src/server/serverless.ts --bundle --platform=node --format=esm --target=node18 --packages=external --outfile=api/index.js',
     { stdio: 'inherit' }
   );
-  execSync(
-    'npx esbuild api/server.ts --bundle --platform=node --format=esm --target=node18 --packages=external --outfile=api/server.js',
-    { stdio: 'inherit' }
-  );
-  console.log('[Build] API serverless functions bundled successfully.');
+  console.log('[Build] Vercel Serverless API function bundled successfully to api/index.js.');
 } catch (err) {
   console.warn('[Build] Warning during serverless bundling:', err.message);
 }

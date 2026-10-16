@@ -1,6 +1,6 @@
 import express from 'express';
-import { apiRouter } from '../src/server/routes/api';
-import { authenticate } from '../src/server/security';
+import { apiRouter } from './routes/api';
+import { authenticate } from './security';
 
 const app = express();
 
@@ -40,7 +40,6 @@ app.get('/api/health', (req, res) => {
 // Mount API router
 app.use('/api', apiRouter);
 app.use('/api/v1', apiRouter);
-// Also support root router when mounted under /api in Vercel
 app.use('/', apiRouter);
 
 export default app;

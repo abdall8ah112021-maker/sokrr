@@ -1,4 +1,4 @@
-// api/server.ts
+// src/server/serverless.ts
 import express from "express";
 
 // src/server/routes/api.ts
@@ -2800,7 +2800,7 @@ apiRouter.get("/health", (req, res) => {
   });
 });
 
-// api/server.ts
+// src/server/serverless.ts
 var app = express();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -2829,7 +2829,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api", apiRouter);
 app.use("/api/v1", apiRouter);
 app.use("/", apiRouter);
-var server_default = app;
+var serverless_default = app;
 export {
-  server_default as default
+  serverless_default as default
 };
