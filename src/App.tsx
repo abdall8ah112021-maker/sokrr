@@ -59,20 +59,46 @@ function AppContent() {
 
   const { customer, user } = useAuth();
 
-  // 1. Scroll to top of the page on every navigation / page switch
-  useEffect(() => {
+  // Universal cross-device scroll to top function (phone, tablet, laptop, desktop)
+  const scrollToPageTop = () => {
+    // 1. Immediate scroll
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
     if (document.documentElement) document.documentElement.scrollTop = 0;
     if (document.body) document.body.scrollTop = 0;
+    const rootEl = document.getElementById('root');
+    if (rootEl) rootEl.scrollTop = 0;
+
+    // 2. Animation frame scroll (after React commit and DOM paint)
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    });
+
+    // 3. Post-render timer for mobile Safari & Android touch momentum cancellation
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }, 40);
+
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 120);
+  };
+
+  // 1. Scroll to top of the page on every navigation / page switch across all devices
+  useEffect(() => {
+    scrollToPageTop();
   }, [currentTab, selectedBusinessId, selectedProductId, selectedServiceId, selectedOrderId]);
 
   // 2. Return to Home page whenever logout is triggered
   useEffect(() => {
     const handleLogout = () => {
       setCurrentTab('home');
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      if (document.documentElement) document.documentElement.scrollTop = 0;
-      if (document.body) document.body.scrollTop = 0;
+      scrollToPageTop();
     };
 
     window.addEventListener('sugar:auth:logout', handleLogout);

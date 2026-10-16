@@ -119,9 +119,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                   onClick={() => setCurrentTab(user ? (user.role === 'CUSTOMER' ? 'card' : 'business-dashboard') : 'register-customer')}
                   className="py-3.5 px-7 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-cyan-300 hover:from-sky-300 hover:to-cyan-200 shadow-xl shadow-sky-500/25 hover:shadow-sky-400/40 transition-all flex items-center gap-2 text-sm sm:text-base group"
                 >
-                  <CreditCard className="w-5 h-5 text-slate-950" />
+                  <CreditCard className="w-4 h-4 text-slate-950" />
                   <span>{user ? 'عرض كارتك الذكي' : content.heroCtaButton}</span>
-                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                  <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
                 </button>
 
                 <button
