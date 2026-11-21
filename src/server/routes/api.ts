@@ -76,6 +76,21 @@ apiRouter.post('/auth/register-customer', (req, res) => {
     address,
   });
 
+  db.recordAuditLog({
+    actorId: user.id,
+    actorRole: 'CUSTOMER',
+    action: 'CUSTOMER_REGISTRATION_SUBMITTED',
+    entity: 'USER',
+    entityId: user.id,
+    reason: 'طلب تسجيل عميل جديد وتفعيل كارت بانتظار المراجعة',
+  });
+
+  db.notifyAdminsOfPendingRegistration({
+    accountType: 'CUSTOMER',
+    displayName: fullName,
+    phone: cleanPhone,
+  });
+
   const accessToken = generateAccessToken(user);
   const { token: refreshToken } = generateRefreshToken(user);
 
@@ -157,6 +172,12 @@ apiRouter.post('/auth/register-business', (req, res) => {
     entity: 'BUSINESS',
     entityId: business.id,
     reason: 'طلب تسجيل نشاط تجاري جديد قيد المراجعة',
+  });
+
+  db.notifyAdminsOfPendingRegistration({
+    accountType: 'BUSINESS',
+    displayName: businessName,
+    phone: cleanPhone,
   });
 
   res.status(201).json({
@@ -963,6 +984,10 @@ apiRouter.post('/transactions/purchase', requireAuth, (req: AuthenticatedRequest
 // ----------------------------------------------------
 // BUSINESS DIRECTORY & MANAGEMENT
 // ----------------------------------------------------
+apiRouter.get('/directory/config', (_req, res) => {
+  res.json({ success: true, data: db.getDirectoryConfig() });
+});
+
 apiRouter.get('/businesses/directory', (req, res) => {
   const businesses = db.getListedBusinesses();
   res.json({ success: true, data: businesses });
@@ -1037,6 +1062,75 @@ apiRouter.put('/businesses/:id/status', requirePermission(Permissions.BUSINESSES
   });
 
   res.json({ success: true, data: business });
+});
+
+apiRouter.put('/admin/directory/config', requirePermission(Permissions.BUSINESSES_UPDATE), (req: AuthenticatedRequest, res) => {
+  const updated = db.updateDirectoryConfig(req.body || {});
+  db.recordAuditLog({
+    actorId: req.user!.id,
+    actorRole: req.user!.role,
+    action: 'DIRECTORY_CONFIG_UPDATED',
+    entity: 'SYSTEM',
+    entityId: 'directory_config',
+    reason: 'تحديث نصوص وخيارات دليل الشركاء والمتاجر من لوحة الإدارة',
+  });
+  res.json({ success: true, data: updated });
+});
+
+apiRouter.post('/admin/businesses', requirePermission(Permissions.BUSINESSES_CREATE), (req: AuthenticatedRequest, res) => {
+  const body = req.body || {};
+  if (!body.businessName || !String(body.businessName).trim()) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'اسم المتجر أو الشريك مطلوب' },
+    });
+    return;
+  }
+
+  const business = db.createAdminBusiness(body);
+  db.recordAuditLog({
+    actorId: req.user!.id,
+    actorRole: req.user!.role,
+    action: 'BUSINESS_ADMIN_CREATED',
+    entity: 'BUSINESS',
+    entityId: business.id,
+    reason: `إضافة متجر/شريك جديد للدليل: ${business.businessName}`,
+  });
+  res.status(201).json({ success: true, data: business });
+});
+
+apiRouter.put('/admin/businesses/:id', requirePermission(Permissions.BUSINESSES_UPDATE), (req: AuthenticatedRequest, res) => {
+  const updated = db.updateBusiness(req.params.id, req.body || {});
+  if (!updated) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'المتجر غير موجود' } });
+    return;
+  }
+  db.recordAuditLog({
+    actorId: req.user!.id,
+    actorRole: req.user!.role,
+    action: 'BUSINESS_ADMIN_UPDATED',
+    entity: 'BUSINESS',
+    entityId: updated.id,
+    reason: `تحديث بيانات المتجر في الدليل: ${updated.businessName}`,
+  });
+  res.json({ success: true, data: updated });
+});
+
+apiRouter.delete('/admin/businesses/:id', requirePermission(Permissions.BUSINESSES_UPDATE), (req: AuthenticatedRequest, res) => {
+  const deleted = db.deleteBusiness(req.params.id);
+  if (!deleted) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'المتجر غير موجود' } });
+    return;
+  }
+  db.recordAuditLog({
+    actorId: req.user!.id,
+    actorRole: req.user!.role,
+    action: 'BUSINESS_ADMIN_DELETED',
+    entity: 'BUSINESS',
+    entityId: req.params.id,
+    reason: 'حذف متجر من دليل الشركاء والمتاجر',
+  });
+  res.json({ success: true, data: { message: 'تم حذف المتجر بنجاح' } });
 });
 
 // ----------------------------------------------------
@@ -1581,8 +1675,12 @@ apiRouter.put('/admin/orders/:id/status', requirePermission(Permissions.ORDERS_U
 });
 
 // ----------------------------------------------------
-// ADMIN DASHBOARD & SYSTEM MANAGEMENT
+// PUBLIC PLATFORM STATS & ADMIN DASHBOARD MANAGEMENT
 // ----------------------------------------------------
+apiRouter.get('/public/stats', (_req, res) => {
+  res.json({ success: true, data: db.getPublicStats() });
+});
+
 apiRouter.get('/admin/metrics', requirePermission(Permissions.REPORTS_VIEW), (req, res) => {
   const metrics = db.getSystemMetrics();
   res.json({ success: true, data: metrics });

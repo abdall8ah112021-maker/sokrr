@@ -115,10 +115,27 @@ export interface Business {
   workingHours?: string;
   galleryImages?: string[];
   discountNote?: string;
+  directoryOptions?: string[];
   isListed: boolean;
   status: AccountStatus;
   ratingAvg: number;
   ratingCount: number;
+}
+
+export interface DirectoryOption {
+  id: string;
+  label: string;
+  isActive: boolean;
+}
+
+export interface DirectoryConfig {
+  badge: string;
+  title: string;
+  subtitle: string;
+  announcement: string;
+  emptyMessage: string;
+  options: DirectoryOption[];
+  updatedAt?: string;
 }
 
 export interface Employee {

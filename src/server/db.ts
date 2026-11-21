@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import {
   UserRole,
@@ -123,6 +124,7 @@ export interface BusinessEntity {
   documents?: string[];
   galleryImages?: string[];
   discountNote?: string;
+  directoryOptions?: string[];
   isListed: boolean;
   status: AccountStatus;
   ratingAvg: number;
@@ -437,7 +439,24 @@ export interface DatabaseSchema {
   settings: SettingEntity[];
   auditLogs: AuditLogEntity[];
   governorates: GovernorateEntity[];
+  directoryConfig: DirectoryConfigEntity;
   jobs: Array<{ id: string; name: string; description: string; schedule: string; status: 'IDLE' | 'RUNNING' | 'FAILED'; lastRun?: string; nextRun?: string; runCount: number; failCount: number }>;
+}
+
+export interface DirectoryOptionEntity {
+  id: string;
+  label: string;
+  isActive: boolean;
+}
+
+export interface DirectoryConfigEntity {
+  badge: string;
+  title: string;
+  subtitle: string;
+  announcement: string;
+  emptyMessage: string;
+  options: DirectoryOptionEntity[];
+  updatedAt: string;
 }
 
 // ----------------------------------------------------
@@ -449,10 +468,18 @@ class SugarDatabase {
   private isLoaded = false;
 
   constructor() {
-    const dataDir = path.resolve(process.cwd(), '.data');
-    if (!fs.existsSync(dataDir)) {
-      try {
+    let dataDir = path.resolve(process.cwd(), '.data');
+    try {
+      if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.accessSync(dataDir, fs.constants.W_OK);
+    } catch {
+      dataDir = path.join(os.tmpdir(), 'sugar_business_data');
+      try {
+        if (!fs.existsSync(dataDir)) {
+          fs.mkdirSync(dataDir, { recursive: true });
+        }
       } catch {
         // Fallback to in-memory if disk restricted
       }
@@ -493,6 +520,9 @@ class SugarDatabase {
               updatedBy: 'usr_super_admin_01',
             });
           }
+        }
+        if (!parsed.directoryConfig) {
+          parsed.directoryConfig = this.getDefaultDirectoryConfig(parsed.sectors);
         }
         return parsed;
       } catch {
@@ -978,7 +1008,36 @@ class SugarDatabase {
       settings,
       auditLogs,
       governorates,
+      directoryConfig: this.getDefaultDirectoryConfig(sectors),
       jobs,
+    };
+  }
+
+  private getDefaultDirectoryConfig(sectors?: SectorEntity[]): DirectoryConfigEntity {
+    const defaultOptions: DirectoryOptionEntity[] = (sectors && sectors.length > 0
+      ? sectors
+      : [
+          { id: 'sec_01', nameAr: 'المطاعم والكافيهات' },
+          { id: 'sec_02', nameAr: 'الملابس والأزياء' },
+          { id: 'sec_03', nameAr: 'الصحة والجمال والعناية' },
+          { id: 'sec_04', nameAr: 'خدمات وصيانة السيارات' },
+          { id: 'sec_05', nameAr: 'الإلكترونيات والتقنية' },
+          { id: 'sec_06', nameAr: 'المنزل والديكور' },
+        ]
+    ).map((s) => ({
+      id: s.id,
+      label: s.nameAr,
+      isActive: true,
+    }));
+
+    return {
+      badge: 'شبكة الشركاء المعتمدين',
+      title: 'دليل المتاجر والخدمات',
+      subtitle: 'تسوق واكسب مزايا وخصومات فورية مع أفضل المتاجر والكافيهات في مصر',
+      announcement: '',
+      emptyMessage: 'لا توجد متاجر أو خيارات مطابقة للبحث حالياً.',
+      options: defaultOptions,
+      updatedAt: new Date().toISOString(),
     };
   }
 
@@ -1213,23 +1272,53 @@ class SugarDatabase {
         const user = this.findUserById(c.userId)!;
         const card = this.data.cards.find((card) => card.customerId === c.id);
         return { ...c, user, card };
-      });
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const pendingBusinesses = this.data.businesses
       .filter((b) => {
         const u = this.findUserById(b.userId);
-        return (u && u.status === 'PENDING') || b.status === 'PENDING';
+        return (
+          b.status === 'PENDING' ||
+          b.status === 'REQUIRES_CHANGES' ||
+          (u && (u.status === 'PENDING' || u.status === 'REQUIRES_CHANGES'))
+        );
       })
       .map((b) => {
-        const user = this.findUserById(b.userId)!;
+        const user = this.findUserById(b.userId);
         return { ...b, user };
-      });
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return {
       customers: pendingCustomers,
       businesses: pendingBusinesses,
       totalPending: pendingCustomers.length + pendingBusinesses.length,
     };
+  }
+
+  notifyAdminsOfPendingRegistration(params: {
+    accountType: 'CUSTOMER' | 'BUSINESS';
+    displayName: string;
+    phone: string;
+  }) {
+    const admins = this.data.users.filter((u) => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN');
+    const title =
+      params.accountType === 'CUSTOMER'
+        ? 'طلب حساب عميل جديد بانتظار الموافقة'
+        : 'طلب تسجيل شريك تجاري جديد بانتظار الموافقة';
+    const message = `قام (${params.displayName} - ${params.phone}) بإنشاء حساب جديد وهو ظاهر الآن في مركز الموافقات.`;
+
+    admins.forEach((admin) => {
+      this.createNotification({
+        userId: admin.id,
+        type: 'ADMIN_ALERT',
+        title,
+        message,
+        priority: 'HIGH',
+        deepLink: '/admin-dashboard',
+      });
+    });
   }
 
   approveUser(userIdOrCustomerId: string, notes?: string, actorId?: string): { user: UserEntity; card?: CardEntity } {
@@ -1646,6 +1735,79 @@ class SugarDatabase {
 
   getListedBusinesses(): BusinessEntity[] {
     return this.data.businesses.filter((b) => b.status === 'ACTIVE' && b.isListed === true);
+  }
+
+  createAdminBusiness(data: Partial<BusinessEntity>): BusinessEntity {
+    const now = new Date().toISOString();
+    const newBusiness: BusinessEntity = {
+      id: `biz_${crypto.randomUUID().slice(0, 8)}`,
+      userId: data.userId?.trim() || `usr_dir_${crypto.randomUUID().slice(0, 8)}`,
+      businessName: data.businessName?.trim() || 'شريك تجاري جديد',
+      ownerName: data.ownerName?.trim() || 'الإدارة',
+      phone: data.phone?.trim() || '',
+      email: data.email?.trim() || undefined,
+      governorate: data.governorate?.trim() || 'القاهرة',
+      city: data.city?.trim() || '',
+      address: data.address?.trim() || '',
+      type: data.type?.trim() || 'متجر معتمد',
+      sectorId: data.sectorId?.trim() || 'sec_01',
+      description: data.description?.trim() || '',
+      logoUrl: data.logoUrl?.trim() || undefined,
+      socialLinks: data.socialLinks,
+      workingHours: data.workingHours?.trim() || undefined,
+      discountNote: data.discountNote?.trim() || undefined,
+      directoryOptions: Array.isArray(data.directoryOptions) ? data.directoryOptions : [],
+      isListed: data.isListed !== undefined ? Boolean(data.isListed) : true,
+      status: data.status || 'ACTIVE',
+      ratingAvg: Number(data.ratingAvg) || 5,
+      ratingCount: Number(data.ratingCount) || 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.data.businesses.push(newBusiness);
+    this.persist();
+    return newBusiness;
+  }
+
+  deleteBusiness(id: string): boolean {
+    const idx = this.data.businesses.findIndex((b) => b.id === id);
+    if (idx === -1) return false;
+    this.data.businesses.splice(idx, 1);
+    this.persist();
+    return true;
+  }
+
+  getDirectoryConfig(): DirectoryConfigEntity {
+    if (!this.data.directoryConfig) {
+      this.data.directoryConfig = this.getDefaultDirectoryConfig(this.data.sectors);
+      this.persist();
+    }
+    return this.data.directoryConfig;
+  }
+
+  updateDirectoryConfig(updates: Partial<DirectoryConfigEntity>): DirectoryConfigEntity {
+    const current = this.getDirectoryConfig();
+    const nextOptions: DirectoryOptionEntity[] = Array.isArray(updates.options)
+      ? updates.options
+          .filter((o) => o && typeof o.label === 'string' && o.label.trim().length > 0)
+          .map((o) => ({
+            id: o.id?.trim() || `opt_${crypto.randomUUID().slice(0, 8)}`,
+            label: o.label.trim(),
+            isActive: o.isActive !== undefined ? Boolean(o.isActive) : true,
+          }))
+      : current.options;
+
+    this.data.directoryConfig = {
+      badge: updates.badge !== undefined ? updates.badge : current.badge,
+      title: updates.title !== undefined ? updates.title : current.title,
+      subtitle: updates.subtitle !== undefined ? updates.subtitle : current.subtitle,
+      announcement: updates.announcement !== undefined ? updates.announcement : current.announcement,
+      emptyMessage: updates.emptyMessage !== undefined ? updates.emptyMessage : current.emptyMessage,
+      options: nextOptions,
+      updatedAt: new Date().toISOString(),
+    };
+    this.persist();
+    return this.data.directoryConfig;
   }
 
   findEmployeeById(id: string): EmployeeEntity | undefined {
@@ -2401,10 +2563,10 @@ class SugarDatabase {
     const totalCustomers = this.data.customers.length;
     const activeCards = this.data.cards.filter((c) => c.status === 'ACTIVE').length;
     const totalBusinesses = this.data.businesses.length;
-    const listedBusinesses = this.data.businesses.filter((b) => b.isListed).length;
+    const listedBusinesses = this.data.businesses.filter((b) => b.isListed || b.status === 'ACTIVE').length;
     const totalOrders = this.data.orders.length;
     const totalPointsAwarded = this.data.pointLedger
-      .filter((l) => l.type === 'EARN')
+      .filter((l) => (l.type === 'EARN' || l.type === 'ADJUSTMENT') && l.points > 0)
       .reduce((sum, l) => sum + l.points, 0);
 
     return {
@@ -2418,6 +2580,22 @@ class SugarDatabase {
         customers: this.data.users.filter((u) => u.role === 'CUSTOMER' && u.status === 'PENDING').length,
         businesses: this.data.businesses.filter((b) => b.status === 'PENDING').length,
         offers: this.data.offers.filter((o) => o.status === 'PENDING').length,
+      },
+    };
+  }
+
+  getPublicStats() {
+    const metrics = this.getSystemMetrics();
+    return {
+      membersCount: 10800 + metrics.totalCustomers,
+      cardsCount: 10800 + metrics.activeCards,
+      partnersCount: 600 + metrics.listedBusinesses,
+      pointsCount: 38890 + metrics.totalPointsAwarded,
+      raw: {
+        totalCustomers: metrics.totalCustomers,
+        activeCards: metrics.activeCards,
+        listedBusinesses: metrics.listedBusinesses,
+        totalPointsAwarded: metrics.totalPointsAwarded,
       },
     };
   }

@@ -44,6 +44,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Business, Customer, Card, Product, Governorate } from '../types';
 import { runAdminCRUDTests } from '../testing/AdminCRUDTest';
 import { AdminStorePage } from '../components/admin/AdminStorePage';
+import { AdminDirectoryPage } from '../components/admin/AdminDirectoryPage';
 import { AdminCustomersManager } from '../components/admin/AdminCustomersManager';
 import { AdminServicesManager } from '../components/admin/AdminServicesManager';
 import { AdminOffersManager } from '../components/admin/AdminOffersManager';
@@ -59,10 +60,49 @@ export const AdminDashboardPage: React.FC = () => {
   const { content: siteContent, saveAllContent, resetContent: resetSiteContent } = useSiteContent();
   const { 
     metrics, businesses, customers, news, cards, systemSettings, jobs, auditLogs, 
-    services, offers, governorates, products, orders, refetchData 
+    services, offers, governorates, products, orders, directoryConfig, pendingApprovals, refetchData, refetchApprovals 
   } = useAdminData();
   const loadData = refetchData;
-  const [activeTab, setActiveTab] = useState<'kpis' | 'content' | 'approvals' | 'customers' | 'businesses' | 'cards' | 'points' | 'settings' | 'jobs' | 'audit' | 'store' | 'services' | 'offers' | 'governorates' | 'notifications' | 'news'>('kpis');
+  const [activeTab, setActiveTab] = useState<'kpis' | 'content' | 'approvals' | 'customers' | 'businesses' | 'directory' | 'cards' | 'points' | 'settings' | 'jobs' | 'audit' | 'store' | 'services' | 'offers' | 'governorates' | 'notifications' | 'news'>('kpis');
+
+  const pendingCustomers = React.useMemo(() => {
+    const map = new Map<string, any>();
+    for (const c of customers) {
+      if (c.user?.status === 'PENDING' || c.user?.status === 'REQUIRES_CHANGES') {
+        map.set(c.id, c);
+      }
+    }
+    for (const c of pendingApprovals?.customers || []) {
+      map.set(c.id, c);
+    }
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }, [customers, pendingApprovals]);
+
+  const pendingBusinesses = React.useMemo(() => {
+    const map = new Map<string, any>();
+    for (const b of businesses) {
+      if (b.status === 'PENDING' || b.status === 'REQUIRES_CHANGES') {
+        map.set(b.id, b);
+      }
+    }
+    for (const b of pendingApprovals?.businesses || []) {
+      map.set(b.id, b);
+    }
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }, [businesses, pendingApprovals]);
+
+  const totalPendingCount = pendingCustomers.length + pendingBusinesses.length;
+
+  useEffect(() => {
+    if (activeTab === 'approvals') {
+      refetchApprovals();
+      refetchData();
+    }
+  }, [activeTab, refetchApprovals, refetchData]);
 
   // Frontend Content Editor State
   const [editableContent, setEditableContent] = useState({ ...siteContent });
@@ -306,10 +346,36 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  const handleCreateBusiness = async (business: Omit<Business, 'id'>) => {
+  const broadcastDirectoryChange = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('sugar:approvals:updated'));
+      if ('BroadcastChannel' in window) {
+        try {
+          const ch = new BroadcastChannel('sugar_approvals');
+          ch.postMessage({ type: 'DIRECTORY_UPDATED', at: Date.now() });
+          ch.close();
+        } catch {
+          // Ignore BroadcastChannel errors
+        }
+      }
+    }
+  };
+
+  const handleSaveDirectoryConfig = async (config: any) => {
+    try {
+      await api.updateDirectoryConfig(config);
+      loadData();
+      broadcastDirectoryChange();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleCreateBusiness = async (business: Partial<Business>) => {
     try {
       await api.adminCreateBusiness(business);
       loadData();
+      broadcastDirectoryChange();
     } catch (err: any) {
       alert(err.message);
     }
@@ -319,6 +385,7 @@ export const AdminDashboardPage: React.FC = () => {
     try {
       await api.adminUpdateBusiness(id, business);
       loadData();
+      broadcastDirectoryChange();
     } catch (err: any) {
       alert(err.message);
     }
@@ -329,6 +396,7 @@ export const AdminDashboardPage: React.FC = () => {
       try {
         await api.adminDeleteBusiness(id);
         loadData();
+        broadcastDirectoryChange();
       } catch (err: any) {
         alert(err.message);
       }
@@ -430,6 +498,7 @@ export const AdminDashboardPage: React.FC = () => {
           { id: 'approvals', label: 'مركز الموافقات', icon: <CheckCircle className="w-4 h-4 shrink-0" /> },
           { id: 'customers', label: 'إدارة العملاء', icon: <Users className="w-4 h-4 shrink-0" /> },
           { id: 'businesses', label: 'المتاجر والشركاء', icon: <Store className="w-4 h-4 shrink-0" /> },
+          { id: 'directory', label: 'دليل الشركاء والمتاجر', icon: <Globe className="w-4 h-4 text-sky-400 shrink-0" /> },
           { id: 'store', label: 'صفحة المتجر', icon: <ShoppingBag className="w-4 h-4 shrink-0" /> },
           { id: 'services', label: 'إدارة الخدمات', icon: <Tag className="w-4 h-4 shrink-0" /> },
           { id: 'offers', label: 'إدارة العروض', icon: <Sparkles className="w-4 h-4 shrink-0" /> },
@@ -454,9 +523,44 @@ export const AdminDashboardPage: React.FC = () => {
           >
             {tab.icon}
             <span>{tab.label}</span>
+            {tab.id === 'approvals' && totalPendingCount > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black font-mono ${
+                activeTab === 'approvals'
+                  ? 'bg-slate-950 text-amber-300'
+                  : 'bg-amber-500 text-slate-950 animate-pulse'
+              }`}>
+                {totalPendingCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
+
+      {/* Live Pending Accounts Alert Banner */}
+      {totalPendingCount > 0 && activeTab !== 'approvals' && (
+        <div className="p-4 rounded-2xl bg-gradient-to-l from-amber-950/70 via-[#0f172a] to-sky-950/50 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 text-amber-300 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-black text-white">
+                يوجد {totalPendingCount} حساب جديد بانتظار المراجعة والموافقة الفورية
+              </p>
+              <p className="text-[11px] text-amber-200/80">
+                عملاء جدد: {pendingCustomers.length} • أنشطة وشركاء تجاريين: {pendingBusinesses.length}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('approvals')}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-200 text-slate-950 font-black text-xs transition-all shrink-0 shadow-md shadow-amber-500/20"
+          >
+            فتح مركز الموافقات الآن
+          </button>
+        </div>
+      )}
 
       {/* ================= TAB 0: FRONTEND CONTENT & CMS EDITOR (زر تعديل المحتوى للواجهة الأمامية) ================= */}
       {activeTab === 'content' && (
@@ -981,6 +1085,20 @@ export const AdminDashboardPage: React.FC = () => {
         />
       )}
 
+      {/* ================= TAB: DIRECTORY (دليل الشركاء والمتاجر) ================= */}
+      {activeTab === 'directory' && (
+        <AdminDirectoryPage
+          businesses={businesses}
+          governorates={governorates}
+          directoryConfig={directoryConfig}
+          onAddBusiness={handleCreateBusiness}
+          onUpdateBusiness={handleUpdateBusiness}
+          onDeleteBusiness={handleDeleteBusiness}
+          onSaveConfig={handleSaveDirectoryConfig}
+          onRefresh={loadData}
+        />
+      )}
+
       {/* ================= TAB: CUSTOMERS ================= */}
       {activeTab === 'customers' && (
         <AdminCustomersManager customers={customers} onUpdate={loadData} onDelete={async (userId) => {
@@ -1105,6 +1223,32 @@ export const AdminDashboardPage: React.FC = () => {
       {/* ================= TAB 2: APPROVALS ================= */}
       {activeTab === 'approvals' && (
         <div className="space-y-6">
+          {/* Live Sync Bar */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0b0f1b] border border-sky-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <div>
+                <h2 className="text-sm font-black text-white">مركز الموافقات الفورية</h2>
+                <p className="text-[11px] text-slate-400">
+                  مزامنة تلقائية فورية مفعلة — يظهر أي حساب عميل أو شريك تجاري جديد فور إنشائه مباشرة.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-amber-300 font-bold">
+                إجمالي الطلبات المعلقة: {totalPendingCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => loadData()}
+                className="py-1.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-sky-400 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>تحديث الآن</span>
+              </button>
+            </div>
+          </div>
+
           {/* Section 1: Customer Card & Membership Approvals */}
           <div className="p-6 rounded-3xl bg-[#0b0f1b] border border-sky-500/30 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -1113,103 +1257,122 @@ export const AdminDashboardPage: React.FC = () => {
                 <span>طلبات تسجيل العملاء وإصدار الكروت الذكية المعلقة (Customer Approvals)</span>
               </h3>
               <span className="text-xs px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/40 text-amber-300 font-bold">
-                {customers.filter((c) => c.user?.status === 'PENDING').length} طلب معلق
+                {pendingCustomers.length} طلب معلق
               </span>
             </div>
 
             <div className="divide-y divide-slate-800/80">
-              {customers.filter((c) => c.user?.status === 'PENDING').length === 0 ? (
+              {pendingCustomers.length === 0 ? (
                 <div className="py-8 text-center space-y-2">
                   <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto" />
                   <p className="text-xs text-slate-400">لا توجد طلبات عملاء معلقة حالياً، جميع الكروت معتمدة ومفعلة.</p>
                 </div>
               ) : (
-                customers
-                  .filter((c) => c.user?.status === 'PENDING')
-                  .map((c) => (
-                    <div key={c.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-900/30 px-3 rounded-2xl transition-colors">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-white text-sm">{c.fullName}</h4>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-500/30 font-semibold">
-                            معلق - بانتظار إصدار الكارت
+                pendingCustomers.map((c) => (
+                  <div key={c.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-900/30 px-3 rounded-2xl transition-colors">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-bold text-white text-sm">{c.fullName}</h4>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-500/30 font-semibold">
+                          {c.user?.status === 'REQUIRES_CHANGES' ? 'مطلوب استكمال بيانات' : 'معلق - بانتظار إصدار الكارت'}
+                        </span>
+                        {c.createdAt && (
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            {new Date(c.createdAt).toLocaleString('ar-EG')}
                           </span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1 space-x-2 space-x-reverse">
-                          <span>الهاتف: <strong className="font-mono text-sky-300">{c.user?.phone}</strong></span>
-                          <span>•</span>
-                          <span>البريد: <span className="font-mono text-slate-300">{c.user?.email || 'لم يُحدد (اختياري)'}</span></span>
-                          <span>•</span>
-                          <span>{c.governorate}، {c.city}</span>
-                          {c.address && <span>• العنوان: {c.address}</span>}
-                        </p>
+                        )}
                       </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleApproveCustomer(c.userId)}
-                          className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 text-slate-950" />
-                          <span>قبول الطلب وتفعيل الكارت</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRejectCustomer(c.userId)}
-                          className="py-2 px-3.5 rounded-xl bg-rose-950/80 text-rose-300 hover:bg-rose-900 border border-rose-500/40 text-xs font-semibold transition-all flex items-center gap-1.5"
-                        >
-                          <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                          <span>رفض الطلب</span>
-                        </button>
-                      </div>
+                      <p className="text-xs text-slate-400 mt-1 space-x-2 space-x-reverse">
+                        <span>الهاتف: <strong className="font-mono text-sky-300">{c.user?.phone}</strong></span>
+                        <span>•</span>
+                        <span>البريد: <span className="font-mono text-slate-300">{c.user?.email || 'لم يُحدد (اختياري)'}</span></span>
+                        <span>•</span>
+                        <span>{c.governorate}، {c.city}</span>
+                        {c.address && <span>• العنوان: {c.address}</span>}
+                      </p>
                     </div>
-                  ))
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleApproveCustomer(c.userId)}
+                        className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 text-slate-950" />
+                        <span>قبول الطلب وتفعيل الكارت</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRejectCustomer(c.userId)}
+                        className="py-2 px-3.5 rounded-xl bg-rose-950/80 text-rose-300 hover:bg-rose-900 border border-rose-500/40 text-xs font-semibold transition-all flex items-center gap-1.5"
+                      >
+                        <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                        <span>رفض الطلب</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
 
           {/* Section 2: Business Partner Requests */}
           <div className="p-6 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
-              <Store className="w-4 h-4 text-amber-400" />
-              <span>طلبات انضمام الأنشطة التجارية والمتاجر (Business Approvals)</span>
-            </h3>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Store className="w-4 h-4 text-amber-400" />
+                <span>طلبات انضمام الأنشطة التجارية والمتاجر (Business Approvals)</span>
+              </h3>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/40 text-amber-300 font-bold">
+                {pendingBusinesses.length} طلب معلق
+              </span>
+            </div>
 
             <div className="divide-y divide-slate-800/80">
-              {businesses.filter((b) => b.status === 'PENDING').length === 0 ? (
+              {pendingBusinesses.length === 0 ? (
                 <p className="text-xs text-slate-500 py-6 text-center">لا توجد طلبات متاجر معلقة بانتظار المراجعة حالياً.</p>
               ) : (
-                businesses
-                  .filter((b) => b.status === 'PENDING')
-                  .map((b) => (
-                    <div key={b.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
+                pendingBusinesses.map((b) => (
+                  <div key={b.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-900/30 px-3 rounded-2xl transition-colors">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
                         <h4 className="font-bold text-white text-sm">{b.businessName}</h4>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          المسؤول: {b.ownerName} • هاتف: <span className="font-mono">{b.phone}</span> • {b.governorate}، {b.city}
-                        </p>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-500/30 font-semibold">
+                          {b.status === 'REQUIRES_CHANGES' ? 'مطلوب تعديل بيانات' : 'طلب شراكة جديد'}
+                        </span>
+                        {b.createdAt && (
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            {new Date(b.createdAt).toLocaleString('ar-EG')}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleBusinessStatus(b.id, 'ACTIVE', true)}
-                          className="py-1.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          <span>موافقة وإدراج في الدليل</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleBusinessStatus(b.id, 'REJECTED', false)}
-                          className="py-1.5 px-3 rounded-lg bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-500/30 text-xs transition-colors flex items-center gap-1"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>رفض</span>
-                        </button>
-                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        المسؤول: {b.ownerName} • هاتف: <span className="font-mono text-sky-300">{b.phone}</span> • {b.governorate}، {b.city}
+                      </p>
+                      {b.description && (
+                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{b.description}</p>
+                      )}
                     </div>
-                  ))
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleBusinessStatus(b.id, 'ACTIVE', true)}
+                        className="py-2 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1.5"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>موافقة وإدراج في الدليل</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBusinessStatus(b.id, 'REJECTED', false)}
+                        className="py-2 px-3.5 rounded-xl bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-500/30 text-xs font-semibold transition-colors flex items-center gap-1.5"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>رفض</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>

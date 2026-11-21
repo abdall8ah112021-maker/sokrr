@@ -192,7 +192,10 @@ export const api = {
   createPurchase: (cardId: string, amount: number, idempotencyKey: string) =>
     apiRequest('/transactions/purchase', { method: 'POST', body: JSON.stringify({ cardId, amount, idempotencyKey }) }),
 
-  // Businesses
+  // Businesses & Directory
+  getDirectoryConfig: () => apiRequest('/directory/config'),
+  updateDirectoryConfig: (data: any) =>
+    apiRequest('/admin/directory/config', { method: 'PUT', body: JSON.stringify(data) }),
   getDirectory: () => apiRequest('/businesses/directory'),
   getBusiness: (id: string) => apiRequest(`/businesses/${id}`),
   toggleFollowBusiness: (businessId: string) => apiRequest(`/businesses/${businessId}/follow`, { method: 'POST' }),
@@ -292,7 +295,8 @@ export const api = {
   adminUpdateNews: (id: string, data: any) => apiRequest(`/admin/news/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDeleteNews: (id: string) => apiRequest(`/admin/news/${id}`, { method: 'DELETE' }),
 
-  // Admin
+  // Admin & Public Stats
+  getPublicStats: () => apiRequest('/public/stats'),
   getAdminMetrics: () => apiRequest('/admin/metrics'),
   getAdminCustomers: () => apiRequest('/admin/customers'),
   getPendingApprovals: () => apiRequest('/admin/approvals'),

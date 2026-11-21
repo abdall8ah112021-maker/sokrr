@@ -8,16 +8,25 @@ import { Router } from "express";
 // src/server/db.ts
 import crypto from "crypto";
 import fs from "fs";
+import os from "os";
 import path from "path";
 var SugarDatabase = class {
   data;
   filePath;
   isLoaded = false;
   constructor() {
-    const dataDir = path.resolve(process.cwd(), ".data");
-    if (!fs.existsSync(dataDir)) {
-      try {
+    let dataDir = path.resolve(process.cwd(), ".data");
+    try {
+      if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.accessSync(dataDir, fs.constants.W_OK);
+    } catch {
+      dataDir = path.join(os.tmpdir(), "sugar_business_data");
+      try {
+        if (!fs.existsSync(dataDir)) {
+          fs.mkdirSync(dataDir, { recursive: true });
+        }
       } catch {
       }
     }
@@ -54,6 +63,9 @@ var SugarDatabase = class {
               updatedBy: "usr_super_admin_01"
             });
           }
+        }
+        if (!parsed.directoryConfig) {
+          parsed.directoryConfig = this.getDefaultDirectoryConfig(parsed.sectors);
         }
         return parsed;
       } catch {
@@ -520,7 +532,31 @@ var SugarDatabase = class {
       settings,
       auditLogs,
       governorates,
+      directoryConfig: this.getDefaultDirectoryConfig(sectors),
       jobs
+    };
+  }
+  getDefaultDirectoryConfig(sectors) {
+    const defaultOptions = (sectors && sectors.length > 0 ? sectors : [
+      { id: "sec_01", nameAr: "\u0627\u0644\u0645\u0637\u0627\u0639\u0645 \u0648\u0627\u0644\u0643\u0627\u0641\u064A\u0647\u0627\u062A" },
+      { id: "sec_02", nameAr: "\u0627\u0644\u0645\u0644\u0627\u0628\u0633 \u0648\u0627\u0644\u0623\u0632\u064A\u0627\u0621" },
+      { id: "sec_03", nameAr: "\u0627\u0644\u0635\u062D\u0629 \u0648\u0627\u0644\u062C\u0645\u0627\u0644 \u0648\u0627\u0644\u0639\u0646\u0627\u064A\u0629" },
+      { id: "sec_04", nameAr: "\u062E\u062F\u0645\u0627\u062A \u0648\u0635\u064A\u0627\u0646\u0629 \u0627\u0644\u0633\u064A\u0627\u0631\u0627\u062A" },
+      { id: "sec_05", nameAr: "\u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0627\u062A \u0648\u0627\u0644\u062A\u0642\u0646\u064A\u0629" },
+      { id: "sec_06", nameAr: "\u0627\u0644\u0645\u0646\u0632\u0644 \u0648\u0627\u0644\u062F\u064A\u0643\u0648\u0631" }
+    ]).map((s) => ({
+      id: s.id,
+      label: s.nameAr,
+      isActive: true
+    }));
+    return {
+      badge: "\u0634\u0628\u0643\u0629 \u0627\u0644\u0634\u0631\u0643\u0627\u0621 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u064A\u0646",
+      title: "\u062F\u0644\u064A\u0644 \u0627\u0644\u0645\u062A\u0627\u062C\u0631 \u0648\u0627\u0644\u062E\u062F\u0645\u0627\u062A",
+      subtitle: "\u062A\u0633\u0648\u0642 \u0648\u0627\u0643\u0633\u0628 \u0645\u0632\u0627\u064A\u0627 \u0648\u062E\u0635\u0648\u0645\u0627\u062A \u0641\u0648\u0631\u064A\u0629 \u0645\u0639 \u0623\u0641\u0636\u0644 \u0627\u0644\u0645\u062A\u0627\u062C\u0631 \u0648\u0627\u0644\u0643\u0627\u0641\u064A\u0647\u0627\u062A \u0641\u064A \u0645\u0635\u0631",
+      announcement: "",
+      emptyMessage: "\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062A\u0627\u062C\u0631 \u0623\u0648 \u062E\u064A\u0627\u0631\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u0628\u062D\u062B \u062D\u0627\u0644\u064A\u0627\u064B.",
+      options: defaultOptions,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
   // ----------------------------------------------------
@@ -715,19 +751,34 @@ var SugarDatabase = class {
       const user = this.findUserById(c.userId);
       const card = this.data.cards.find((card2) => card2.customerId === c.id);
       return { ...c, user, card };
-    });
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const pendingBusinesses = this.data.businesses.filter((b) => {
       const u = this.findUserById(b.userId);
-      return u && u.status === "PENDING" || b.status === "PENDING";
+      return b.status === "PENDING" || b.status === "REQUIRES_CHANGES" || u && (u.status === "PENDING" || u.status === "REQUIRES_CHANGES");
     }).map((b) => {
       const user = this.findUserById(b.userId);
       return { ...b, user };
-    });
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return {
       customers: pendingCustomers,
       businesses: pendingBusinesses,
       totalPending: pendingCustomers.length + pendingBusinesses.length
     };
+  }
+  notifyAdminsOfPendingRegistration(params) {
+    const admins = this.data.users.filter((u) => u.role === "ADMIN" || u.role === "SUPER_ADMIN");
+    const title = params.accountType === "CUSTOMER" ? "\u0637\u0644\u0628 \u062D\u0633\u0627\u0628 \u0639\u0645\u064A\u0644 \u062C\u062F\u064A\u062F \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629" : "\u0637\u0644\u0628 \u062A\u0633\u062C\u064A\u0644 \u0634\u0631\u064A\u0643 \u062A\u062C\u0627\u0631\u064A \u062C\u062F\u064A\u062F \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629";
+    const message = `\u0642\u0627\u0645 (${params.displayName} - ${params.phone}) \u0628\u0625\u0646\u0634\u0627\u0621 \u062D\u0633\u0627\u0628 \u062C\u062F\u064A\u062F \u0648\u0647\u0648 \u0638\u0627\u0647\u0631 \u0627\u0644\u0622\u0646 \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0627\u062A.`;
+    admins.forEach((admin) => {
+      this.createNotification({
+        userId: admin.id,
+        type: "ADMIN_ALERT",
+        title,
+        message,
+        priority: "HIGH",
+        deepLink: "/admin-dashboard"
+      });
+    });
   }
   approveUser(userIdOrCustomerId, notes, actorId) {
     let user = this.findUserById(userIdOrCustomerId);
@@ -1058,6 +1109,70 @@ var SugarDatabase = class {
   }
   getListedBusinesses() {
     return this.data.businesses.filter((b) => b.status === "ACTIVE" && b.isListed === true);
+  }
+  createAdminBusiness(data) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const newBusiness = {
+      id: `biz_${crypto.randomUUID().slice(0, 8)}`,
+      userId: data.userId?.trim() || `usr_dir_${crypto.randomUUID().slice(0, 8)}`,
+      businessName: data.businessName?.trim() || "\u0634\u0631\u064A\u0643 \u062A\u062C\u0627\u0631\u064A \u062C\u062F\u064A\u062F",
+      ownerName: data.ownerName?.trim() || "\u0627\u0644\u0625\u062F\u0627\u0631\u0629",
+      phone: data.phone?.trim() || "",
+      email: data.email?.trim() || void 0,
+      governorate: data.governorate?.trim() || "\u0627\u0644\u0642\u0627\u0647\u0631\u0629",
+      city: data.city?.trim() || "",
+      address: data.address?.trim() || "",
+      type: data.type?.trim() || "\u0645\u062A\u062C\u0631 \u0645\u0639\u062A\u0645\u062F",
+      sectorId: data.sectorId?.trim() || "sec_01",
+      description: data.description?.trim() || "",
+      logoUrl: data.logoUrl?.trim() || void 0,
+      socialLinks: data.socialLinks,
+      workingHours: data.workingHours?.trim() || void 0,
+      discountNote: data.discountNote?.trim() || void 0,
+      directoryOptions: Array.isArray(data.directoryOptions) ? data.directoryOptions : [],
+      isListed: data.isListed !== void 0 ? Boolean(data.isListed) : true,
+      status: data.status || "ACTIVE",
+      ratingAvg: Number(data.ratingAvg) || 5,
+      ratingCount: Number(data.ratingCount) || 1,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.data.businesses.push(newBusiness);
+    this.persist();
+    return newBusiness;
+  }
+  deleteBusiness(id) {
+    const idx = this.data.businesses.findIndex((b) => b.id === id);
+    if (idx === -1) return false;
+    this.data.businesses.splice(idx, 1);
+    this.persist();
+    return true;
+  }
+  getDirectoryConfig() {
+    if (!this.data.directoryConfig) {
+      this.data.directoryConfig = this.getDefaultDirectoryConfig(this.data.sectors);
+      this.persist();
+    }
+    return this.data.directoryConfig;
+  }
+  updateDirectoryConfig(updates) {
+    const current = this.getDirectoryConfig();
+    const nextOptions = Array.isArray(updates.options) ? updates.options.filter((o) => o && typeof o.label === "string" && o.label.trim().length > 0).map((o) => ({
+      id: o.id?.trim() || `opt_${crypto.randomUUID().slice(0, 8)}`,
+      label: o.label.trim(),
+      isActive: o.isActive !== void 0 ? Boolean(o.isActive) : true
+    })) : current.options;
+    this.data.directoryConfig = {
+      badge: updates.badge !== void 0 ? updates.badge : current.badge,
+      title: updates.title !== void 0 ? updates.title : current.title,
+      subtitle: updates.subtitle !== void 0 ? updates.subtitle : current.subtitle,
+      announcement: updates.announcement !== void 0 ? updates.announcement : current.announcement,
+      emptyMessage: updates.emptyMessage !== void 0 ? updates.emptyMessage : current.emptyMessage,
+      options: nextOptions,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    this.persist();
+    return this.data.directoryConfig;
   }
   findEmployeeById(id) {
     return this.data.employees.find((e) => e.id === id);
@@ -1692,9 +1807,9 @@ var SugarDatabase = class {
     const totalCustomers = this.data.customers.length;
     const activeCards = this.data.cards.filter((c) => c.status === "ACTIVE").length;
     const totalBusinesses = this.data.businesses.length;
-    const listedBusinesses = this.data.businesses.filter((b) => b.isListed).length;
+    const listedBusinesses = this.data.businesses.filter((b) => b.isListed || b.status === "ACTIVE").length;
     const totalOrders = this.data.orders.length;
-    const totalPointsAwarded = this.data.pointLedger.filter((l) => l.type === "EARN").reduce((sum, l) => sum + l.points, 0);
+    const totalPointsAwarded = this.data.pointLedger.filter((l) => (l.type === "EARN" || l.type === "ADJUSTMENT") && l.points > 0).reduce((sum, l) => sum + l.points, 0);
     return {
       totalCustomers,
       activeCards,
@@ -1706,6 +1821,21 @@ var SugarDatabase = class {
         customers: this.data.users.filter((u) => u.role === "CUSTOMER" && u.status === "PENDING").length,
         businesses: this.data.businesses.filter((b) => b.status === "PENDING").length,
         offers: this.data.offers.filter((o) => o.status === "PENDING").length
+      }
+    };
+  }
+  getPublicStats() {
+    const metrics = this.getSystemMetrics();
+    return {
+      membersCount: 10800 + metrics.totalCustomers,
+      cardsCount: 10800 + metrics.activeCards,
+      partnersCount: 600 + metrics.listedBusinesses,
+      pointsCount: 38890 + metrics.totalPointsAwarded,
+      raw: {
+        totalCustomers: metrics.totalCustomers,
+        activeCards: metrics.activeCards,
+        listedBusinesses: metrics.listedBusinesses,
+        totalPointsAwarded: metrics.totalPointsAwarded
       }
     };
   }
@@ -2015,6 +2145,19 @@ apiRouter.post("/auth/register-customer", (req, res) => {
     city,
     address
   });
+  db.recordAuditLog({
+    actorId: user.id,
+    actorRole: "CUSTOMER",
+    action: "CUSTOMER_REGISTRATION_SUBMITTED",
+    entity: "USER",
+    entityId: user.id,
+    reason: "\u0637\u0644\u0628 \u062A\u0633\u062C\u064A\u0644 \u0639\u0645\u064A\u0644 \u062C\u062F\u064A\u062F \u0648\u062A\u0641\u0639\u064A\u0644 \u0643\u0627\u0631\u062A \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"
+  });
+  db.notifyAdminsOfPendingRegistration({
+    accountType: "CUSTOMER",
+    displayName: fullName,
+    phone: cleanPhone
+  });
   const accessToken = generateAccessToken(user);
   const { token: refreshToken } = generateRefreshToken(user);
   res.status(201).json({
@@ -2087,6 +2230,11 @@ apiRouter.post("/auth/register-business", (req, res) => {
     entity: "BUSINESS",
     entityId: business.id,
     reason: "\u0637\u0644\u0628 \u062A\u0633\u062C\u064A\u0644 \u0646\u0634\u0627\u0637 \u062A\u062C\u0627\u0631\u064A \u062C\u062F\u064A\u062F \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"
+  });
+  db.notifyAdminsOfPendingRegistration({
+    accountType: "BUSINESS",
+    displayName: businessName,
+    phone: cleanPhone
   });
   res.status(201).json({
     success: true,
@@ -2763,6 +2911,9 @@ apiRouter.post("/transactions/purchase", requireAuth, (req, res) => {
     });
   }
 });
+apiRouter.get("/directory/config", (_req, res) => {
+  res.json({ success: true, data: db.getDirectoryConfig() });
+});
 apiRouter.get("/businesses/directory", (req, res) => {
   const businesses = db.getListedBusinesses();
   res.json({ success: true, data: businesses });
@@ -2827,6 +2978,70 @@ apiRouter.put("/businesses/:id/status", requirePermission(Permissions.BUSINESSES
     reason: reason || "\u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0646\u0634\u0627\u0637 \u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629"
   });
   res.json({ success: true, data: business });
+});
+apiRouter.put("/admin/directory/config", requirePermission(Permissions.BUSINESSES_UPDATE), (req, res) => {
+  const updated = db.updateDirectoryConfig(req.body || {});
+  db.recordAuditLog({
+    actorId: req.user.id,
+    actorRole: req.user.role,
+    action: "DIRECTORY_CONFIG_UPDATED",
+    entity: "SYSTEM",
+    entityId: "directory_config",
+    reason: "\u062A\u062D\u062F\u064A\u062B \u0646\u0635\u0648\u0635 \u0648\u062E\u064A\u0627\u0631\u0627\u062A \u062F\u0644\u064A\u0644 \u0627\u0644\u0634\u0631\u0643\u0627\u0621 \u0648\u0627\u0644\u0645\u062A\u0627\u062C\u0631 \u0645\u0646 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629"
+  });
+  res.json({ success: true, data: updated });
+});
+apiRouter.post("/admin/businesses", requirePermission(Permissions.BUSINESSES_CREATE), (req, res) => {
+  const body = req.body || {};
+  if (!body.businessName || !String(body.businessName).trim()) {
+    res.status(400).json({
+      success: false,
+      error: { code: "VALIDATION_ERROR", message: "\u0627\u0633\u0645 \u0627\u0644\u0645\u062A\u062C\u0631 \u0623\u0648 \u0627\u0644\u0634\u0631\u064A\u0643 \u0645\u0637\u0644\u0648\u0628" }
+    });
+    return;
+  }
+  const business = db.createAdminBusiness(body);
+  db.recordAuditLog({
+    actorId: req.user.id,
+    actorRole: req.user.role,
+    action: "BUSINESS_ADMIN_CREATED",
+    entity: "BUSINESS",
+    entityId: business.id,
+    reason: `\u0625\u0636\u0627\u0641\u0629 \u0645\u062A\u062C\u0631/\u0634\u0631\u064A\u0643 \u062C\u062F\u064A\u062F \u0644\u0644\u062F\u0644\u064A\u0644: ${business.businessName}`
+  });
+  res.status(201).json({ success: true, data: business });
+});
+apiRouter.put("/admin/businesses/:id", requirePermission(Permissions.BUSINESSES_UPDATE), (req, res) => {
+  const updated = db.updateBusiness(req.params.id, req.body || {});
+  if (!updated) {
+    res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "\u0627\u0644\u0645\u062A\u062C\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" } });
+    return;
+  }
+  db.recordAuditLog({
+    actorId: req.user.id,
+    actorRole: req.user.role,
+    action: "BUSINESS_ADMIN_UPDATED",
+    entity: "BUSINESS",
+    entityId: updated.id,
+    reason: `\u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062A\u062C\u0631 \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644: ${updated.businessName}`
+  });
+  res.json({ success: true, data: updated });
+});
+apiRouter.delete("/admin/businesses/:id", requirePermission(Permissions.BUSINESSES_UPDATE), (req, res) => {
+  const deleted = db.deleteBusiness(req.params.id);
+  if (!deleted) {
+    res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "\u0627\u0644\u0645\u062A\u062C\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" } });
+    return;
+  }
+  db.recordAuditLog({
+    actorId: req.user.id,
+    actorRole: req.user.role,
+    action: "BUSINESS_ADMIN_DELETED",
+    entity: "BUSINESS",
+    entityId: req.params.id,
+    reason: "\u062D\u0630\u0641 \u0645\u062A\u062C\u0631 \u0645\u0646 \u062F\u0644\u064A\u0644 \u0627\u0644\u0634\u0631\u0643\u0627\u0621 \u0648\u0627\u0644\u0645\u062A\u0627\u062C\u0631"
+  });
+  res.json({ success: true, data: { message: "\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0628\u0646\u062C\u0627\u062D" } });
 });
 apiRouter.get("/employees/my-business", requireAuth, (req, res) => {
   const business = db.findBusinessByUserId(req.user.id);
@@ -3277,6 +3492,9 @@ apiRouter.put("/admin/orders/:id/status", requirePermission(Permissions.ORDERS_U
   } catch (err) {
     res.status(400).json({ success: false, error: { code: "ORDER_UPDATE_ERROR", message: err.message } });
   }
+});
+apiRouter.get("/public/stats", (_req, res) => {
+  res.json({ success: true, data: db.getPublicStats() });
 });
 apiRouter.get("/admin/metrics", requirePermission(Permissions.REPORTS_VIEW), (req, res) => {
   const metrics = db.getSystemMetrics();

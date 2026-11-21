@@ -29,7 +29,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentTab }) => {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-sky-400/90 pt-2 font-mono">
               <span className="flex items-center gap-1.5">
                 <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
-                بيانات مشفرة 256-bit
+                بيانات مشفرة
               </span>
               <span className="hidden sm:inline">•</span>
               <span className="flex items-center gap-1.5">

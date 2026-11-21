@@ -49,7 +49,38 @@ export const HomePage: React.FC<HomePageProps> = ({
     api.getServices().then((res) => setServices(Array.isArray(res) ? res : [])).catch(() => setServices([]));
     api.getProducts().then((res) => setProducts(Array.isArray(res) ? res : [])).catch(() => setProducts([]));
     api.getDirectory().then((res) => setBusinesses(Array.isArray(res) ? res : [])).catch(() => setBusinesses([]));
-    api.getAdminMetrics().then(setMetrics).catch(() => {});
+
+    const loadPublicStats = () => {
+      api.getPublicStats().then(setMetrics).catch(() => {});
+    };
+    loadPublicStats();
+
+    const interval = window.setInterval(loadPublicStats, 5000);
+    window.addEventListener('focus', loadPublicStats);
+    window.addEventListener('sugar:approvals:updated', loadPublicStats);
+
+    let channel: BroadcastChannel | null = null;
+    if ('BroadcastChannel' in window) {
+      try {
+        channel = new BroadcastChannel('sugar_approvals');
+        channel.onmessage = loadPublicStats;
+      } catch {
+        // Ignore BroadcastChannel errors
+      }
+    }
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', loadPublicStats);
+      window.removeEventListener('sugar:approvals:updated', loadPublicStats);
+      if (channel) {
+        try {
+          channel.close();
+        } catch {
+          // Ignore close error
+        }
+      }
+    };
   }, []);
 
   // Filtered store preview with safe checks
@@ -405,25 +436,25 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-8 text-center md:divide-x-reverse md:divide-x md:divide-slate-800/80">
             <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
               <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
-                {metrics?.totalCustomers || 1}
+                {metrics?.membersCount ?? 10800}
               </p>
               <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsMembersLabel}</p>
             </div>
             <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
               <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
-                {metrics?.activeCards || 1}
+                {metrics?.cardsCount ?? 10800}
               </p>
               <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsCardsLabel}</p>
             </div>
             <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
               <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
-                {metrics?.listedBusinesses || 1}
+                {metrics?.partnersCount ?? 600}
               </p>
               <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsPartnersLabel}</p>
             </div>
             <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
               <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
-                {metrics?.totalPointsAwarded || 450}
+                {metrics?.pointsCount ?? 38890}
               </p>
               <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsPointsLabel}</p>
             </div>

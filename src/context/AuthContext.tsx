@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api, setStoredTokens, clearStoredTokens, getStoredTokens } from '../api/client';
 import { User, Customer, Business, Employee, Card, PointAccount, UserRole } from '../types';
 import { performBiometricAuthentication } from '../utils/webauthn';
@@ -23,6 +24,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
@@ -30,6 +32,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [card, setCard] = useState<Card | null>(null);
   const [pointAccount, setPointAccount] = useState<PointAccount | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const notifyApprovalsUpdated = () => {
+    queryClient.invalidateQueries({ queryKey: ['pendingApprovals'] });
+    queryClient.invalidateQueries({ queryKey: ['adminData'] });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('sugar:approvals:updated'));
+      if ('BroadcastChannel' in window) {
+        try {
+          const channel = new BroadcastChannel('sugar_approvals');
+          channel.postMessage({ type: 'PENDING_ACCOUNT_CREATED', at: Date.now() });
+          channel.close();
+        } catch {
+          // Ignore BroadcastChannel errors
+        }
+      }
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -98,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCustomer(data.customer);
       setCard(data.card);
       await fetchProfile();
+      notifyApprovalsUpdated();
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       await api.registerBusiness(formData);
+      notifyApprovalsUpdated();
     } finally {
       setIsLoading(false);
     }

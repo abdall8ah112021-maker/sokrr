@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { Store, CheckCircle2, AlertCircle, ArrowLeft, Shield, Clock } from 'lucide-react';
 
 interface RegisterBusinessPageProps {
@@ -7,6 +7,7 @@ interface RegisterBusinessPageProps {
 }
 
 export const RegisterBusinessPage: React.FC<RegisterBusinessPageProps> = ({ setCurrentTab }) => {
+  const { registerBusiness } = useAuth();
   const [businessName, setBusinessName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -36,7 +37,7 @@ export const RegisterBusinessPage: React.FC<RegisterBusinessPageProps> = ({ setC
     setLoading(true);
 
     try {
-      await api.registerBusiness({
+      await registerBusiness({
         businessName,
         ownerName,
         phone: cleanPhone,
