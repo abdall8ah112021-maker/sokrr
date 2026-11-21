@@ -160,6 +160,19 @@ export const api = {
     apiRequest('/auth/register-business', { method: 'POST', body: JSON.stringify(data) }),
   getMe: () => apiRequest('/auth/me'),
 
+  // Biometric / WebAuthn
+  getWebAuthnCredentials: () => apiRequest('/auth/webauthn/credentials'),
+  getWebAuthnRegisterOptions: () =>
+    apiRequest('/auth/webauthn/register-options', { method: 'POST' }),
+  verifyWebAuthnRegister: (data: { challengeToken: string; credential: any; deviceName: string }) =>
+    apiRequest('/auth/webauthn/register-verify', { method: 'POST', body: JSON.stringify(data) }),
+  deleteWebAuthnCredential: (id: string) =>
+    apiRequest(`/auth/webauthn/credentials/${id}`, { method: 'DELETE' }),
+  getWebAuthnLoginOptions: (data: { phone?: string; credentialId?: string }) =>
+    apiRequest('/auth/webauthn/login-options', { method: 'POST', body: JSON.stringify(data) }),
+  verifyWebAuthnLogin: (data: { challengeToken: string; credential: any }) =>
+    apiRequest('/auth/webauthn/login-verify', { method: 'POST', body: JSON.stringify(data) }),
+
   // Cards
   getMyCard: () => apiRequest('/cards/my-card'),
   getAllCards: () => apiRequest('/cards'),
@@ -198,9 +211,6 @@ export const api = {
   getServices: (sectorId?: string) =>
     apiRequest(`/services${sectorId ? `?sectorId=${sectorId}` : ''}`),
   getService: (id: string) => apiRequest(`/services/${id}`),
-  requestService: (data: { serviceId: string; customerNotes?: string }) =>
-    apiRequest('/services/requests', { method: 'POST', body: JSON.stringify(data) }),
-  getMyServiceRequests: () => apiRequest('/services/requests/my-requests'),
 
   // Offers
   getActiveOffers: () => apiRequest('/offers/active'),
@@ -253,9 +263,13 @@ export const api = {
   createDiscountService: (data: any) => apiRequest('/admin/discount-services', { method: 'POST', body: JSON.stringify(data) }),
   updateDiscountService: (id: string, data: any) => apiRequest(`/admin/discount-services/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDiscountService: (id: string) => apiRequest(`/admin/discount-services/${id}`, { method: 'DELETE' }),
+  getAdminProducts: () => apiRequest('/admin/products'),
   adminCreateProduct: (data: any) => apiRequest('/admin/products', { method: 'POST', body: JSON.stringify(data) }),
   adminUpdateProduct: (id: string, data: any) => apiRequest(`/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDeleteProduct: (id: string) => apiRequest(`/admin/products/${id}`, { method: 'DELETE' }),
+  getAdminOrders: () => apiRequest('/admin/orders'),
+  updateAdminOrderStatus: (id: string, status: string, note?: string) =>
+    apiRequest(`/admin/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, note }) }),
   adminCreateGovernorate: (data: any) => apiRequest('/admin/governorates', { method: 'POST', body: JSON.stringify(data) }),
   adminUpdateGovernorate: (id: string, data: any) => apiRequest(`/admin/governorates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDeleteGovernorate: (id: string) => apiRequest(`/admin/governorates/${id}`, { method: 'DELETE' }),

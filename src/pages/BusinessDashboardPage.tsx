@@ -17,6 +17,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { Employee, Offer } from '../types';
+import { BiometricSetupCard } from '../components/common/BiometricSetupCard';
 
 export const BusinessDashboardPage: React.FC = () => {
   const { user, business, employee } = useAuth();
@@ -142,15 +143,15 @@ export const BusinessDashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 text-right">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-10 text-right">
       {/* Business Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#0c1220] via-[#090e1a] to-[#060910] border border-sky-500/20 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-8 rounded-3xl bg-gradient-to-r from-[#0c1220] via-[#090e1a] to-[#060910] border border-sky-500/20 shadow-xl">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Store className="w-4 h-4 text-emerald-400" />
             <span className="text-xs text-emerald-400 font-bold">بوابة الشريك التجاري المعتمد</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">
+          <h1 className="text-xl sm:text-3xl font-black text-white">
             {business?.businessName || (employee ? `كاشير: ${employee.name}` : 'متجر Sugar Business')}
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -160,20 +161,20 @@ export const BusinessDashboardPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="py-2 px-4 rounded-xl bg-sky-950/80 border border-sky-400/30 text-sky-300 text-xs font-mono font-bold">
-            نقاط العملية: 10 نقاط افتراضية
+          <span className="py-2 px-4 rounded-xl bg-sky-950/80 border border-sky-400/30 text-sky-300 text-xs font-bold">
+            التحقق من الكارت وتفعيل الخصم (النقاط عبر متجر الموقع فقط)
           </span>
         </div>
       </div>
 
       {/* Main Section: Card Scanner & Purchase Flow (Section 34) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
         {/* Scan & Transaction Panel */}
-        <div className="lg:col-span-7 p-6 sm:p-8 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <QrCode className="w-5 h-5 text-sky-400" />
-              <span>مسح الكارت وتسجيل عملية الشراء</span>
+        <div className="lg:col-span-7 p-5 sm:p-8 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-4">
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-sky-400 shrink-0" />
+              <span>مسح الكارت وتسجيل الفاتورة والتحقق من العضوية</span>
             </h2>
             <span className="text-[11px] text-slate-500 font-mono">STEP 1 OF 2</span>
           </div>
@@ -188,12 +189,12 @@ export const BusinessDashboardPage: React.FC = () => {
           {successTx && (
             <div className="p-6 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-sm space-y-2 text-center">
               <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto" />
-              <h3 className="text-lg font-bold text-white">تمت العملية وإضافة النقاط بنجاح!</h3>
+              <h3 className="text-lg font-bold text-white">تم التحقق من الكارت وتسجيل الفاتورة بنجاح!</h3>
               <p className="text-xs text-slate-300">
                 رقم المعاملة: <span className="font-mono text-sky-300 font-bold">{successTx.transactionId}</span>
               </p>
-              <div className="inline-block py-1.5 px-4 rounded-full bg-emerald-900/60 font-bold text-emerald-300 text-xs font-mono">
-                +{successTx.pointsAwarded} نقطة أُضيفت لرصيد العميل
+              <div className="inline-block py-1.5 px-4 rounded-full bg-slate-900/80 border border-slate-700 font-semibold text-slate-300 text-xs">
+                لا تُمنح نقاط على فواتير التجار — تُكسب النقاط فقط من متجر الموقع الرسمي
               </div>
             </div>
           )}
@@ -204,7 +205,7 @@ export const BusinessDashboardPage: React.FC = () => {
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 أدخل رمز الـ QR أو رقم الكارت البلاستيكي
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2.5">
                 <input
                   type="text"
                   value={scanQuery}
@@ -215,7 +216,7 @@ export const BusinessDashboardPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={resolving || !scanQuery}
-                  className="py-3 px-6 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs sm:text-sm transition-colors disabled:opacity-50"
+                  className="w-full sm:w-auto py-3 px-6 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs sm:text-sm transition-colors disabled:opacity-50 shrink-0"
                 >
                   {resolving ? 'جاري الفحص...' : 'فحص الكارت'}
                 </button>
@@ -271,7 +272,7 @@ export const BusinessDashboardPage: React.FC = () => {
                 ) : (
                   <>
                     <CheckCircle className="w-5 h-5 text-slate-950" />
-                    <span>تأكيد عملية الشراء وإضافة النقاط فورياً</span>
+                    <span>تأكيد الفاتورة والتحقق من الكارت</span>
                   </>
                 )}
               </button>
@@ -357,10 +358,13 @@ export const BusinessDashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Biometric Setup */}
+      <BiometricSetupCard />
+
       {/* Add Employee Modal */}
       {showAddEmpModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full p-6 rounded-3xl bg-[#0c101c] border border-slate-800 text-right space-y-4">
+          <div className="max-w-md w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 rounded-3xl bg-[#0c101c] border border-slate-800 text-right space-y-4">
             <h3 className="text-base font-bold text-white">إضافة موظف / كاشير جديد</h3>
             <form onSubmit={handleAddEmployee} className="space-y-3 text-xs">
               <div>
@@ -428,7 +432,7 @@ export const BusinessDashboardPage: React.FC = () => {
       {/* Add Offer Modal */}
       {showAddOfferModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full p-6 rounded-3xl bg-[#0c101c] border border-slate-800 text-right space-y-4">
+          <div className="max-w-md w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 rounded-3xl bg-[#0c101c] border border-slate-800 text-right space-y-4">
             <h3 className="text-base font-bold text-white">إنشاء عرض ترويجي جديد</h3>
             <form onSubmit={handleAddOffer} className="space-y-3 text-xs">
               <div>

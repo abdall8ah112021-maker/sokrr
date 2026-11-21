@@ -4,6 +4,7 @@ import { useSiteContent, defaultSiteContent } from '../context/ContentContext';
 import { useAdminData } from '../context/AdminDataContext';
 import { useSettings } from '../context/SettingsContext';
 import { api } from '../api/client';
+import { BiometricSetupCard } from '../components/common/BiometricSetupCard';
 import {
   Shield,
   Users,
@@ -42,7 +43,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Business, Customer, Card, Product, Governorate } from '../types';
 import { runAdminCRUDTests } from '../testing/AdminCRUDTest';
-import { AdminProductsManager } from '../components/admin/AdminProductsManager';
+import { AdminStorePage } from '../components/admin/AdminStorePage';
 import { AdminCustomersManager } from '../components/admin/AdminCustomersManager';
 import { AdminServicesManager } from '../components/admin/AdminServicesManager';
 import { AdminOffersManager } from '../components/admin/AdminOffersManager';
@@ -58,10 +59,10 @@ export const AdminDashboardPage: React.FC = () => {
   const { content: siteContent, saveAllContent, resetContent: resetSiteContent } = useSiteContent();
   const { 
     metrics, businesses, customers, news, cards, systemSettings, jobs, auditLogs, 
-    services, offers, governorates, products, refetchData 
+    services, offers, governorates, products, orders, refetchData 
   } = useAdminData();
   const loadData = refetchData;
-  const [activeTab, setActiveTab] = useState<'kpis' | 'content' | 'approvals' | 'customers' | 'businesses' | 'cards' | 'points' | 'settings' | 'jobs' | 'audit' | 'products' | 'services' | 'offers' | 'governorates' | 'notifications' | 'news'>('kpis');
+  const [activeTab, setActiveTab] = useState<'kpis' | 'content' | 'approvals' | 'customers' | 'businesses' | 'cards' | 'points' | 'settings' | 'jobs' | 'audit' | 'store' | 'services' | 'offers' | 'governorates' | 'notifications' | 'news'>('kpis');
 
   // Frontend Content Editor State
   const [editableContent, setEditableContent] = useState({ ...siteContent });
@@ -220,6 +221,15 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
+  const handleUpdateOrderStatus = async (orderId: string, status: string, note?: string) => {
+    try {
+      await api.updateAdminOrderStatus(orderId, status, note);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'تعذر تحديث حالة الطلب');
+    }
+  };
+
   const handleCreateCustomer = async (customer: Omit<Customer, 'id'>) => {
     try {
       // Need an API for creating customer, check client.ts
@@ -356,9 +366,9 @@ export const AdminDashboardPage: React.FC = () => {
 
   // ... and so on for others. I'll do these one by one or in smaller groups.
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-right">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 text-right">
       {/* Admin Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#0c1220] via-[#090e1a] to-[#060910] border border-sky-500/20 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-8 rounded-3xl bg-gradient-to-r from-[#0c1220] via-[#090e1a] to-[#060910] border border-sky-500/20 shadow-xl">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Shield className="w-4 h-4 text-sky-400" />
@@ -366,7 +376,7 @@ export const AdminDashboardPage: React.FC = () => {
               {user?.role === 'SUPER_ADMIN' ? 'مركز القيادة - المشرف العام (Super Admin)' : 'لوحة إدارة النظام'}
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">
+          <h1 className="text-xl sm:text-3xl font-black text-white">
             إدارة منظومة Sugar Business
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -374,18 +384,18 @@ export const AdminDashboardPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Main Requested Button: زر تعديل المحتوى للواجهة الأمامية */}
           <button
             type="button"
             onClick={() => setActiveTab('content')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-lg transition-all ${
+            className={`w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-lg transition-all ${
               activeTab === 'content'
                 ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 shadow-amber-500/25 ring-2 ring-amber-400'
                 : 'bg-gradient-to-r from-sky-400 to-cyan-300 hover:from-sky-300 hover:to-cyan-200 text-slate-950 shadow-sky-500/20 hover:scale-105 active:scale-95'
             }`}
           >
-            <Edit3 className="w-4 h-4 text-slate-950" />
+            <Edit3 className="w-4 h-4 text-slate-950 shrink-0" />
             <span>زر تعديل المحتوى للواجهة الأمامية</span>
           </button>
 
@@ -413,33 +423,33 @@ export const AdminDashboardPage: React.FC = () => {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+      <div className="flex md:flex-wrap items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
         {[
-          { id: 'content', label: 'تعديل المحتوى للواجهة الأمامية', icon: <Edit3 className="w-4 h-4 text-amber-400" /> },
-          { id: 'kpis', label: 'المؤشرات والـ KPIs', icon: <Activity className="w-4 h-4" /> },
-          { id: 'approvals', label: 'مركز الموافقات', icon: <CheckCircle className="w-4 h-4" /> },
-          { id: 'customers', label: 'إدارة العملاء', icon: <Users className="w-4 h-4" /> },
-          { id: 'businesses', label: 'المتاجر والشركاء', icon: <Store className="w-4 h-4" /> },
-          { id: 'products', label: 'إدارة المنتجات', icon: <ShoppingBag className="w-4 h-4" /> },
-          { id: 'services', label: 'إدارة الخدمات', icon: <Tag className="w-4 h-4" /> },
-          { id: 'offers', label: 'إدارة العروض', icon: <Sparkles className="w-4 h-4" /> },
-          { id: 'governorates', label: 'تغطية المحافظات', icon: <MapPin className="w-4 h-4" /> },
-          { id: 'notifications', label: 'الإشعارات', icon: <Bell className="w-4 h-4" /> },
-          { id: 'news', label: 'الأخبار والتحديثات', icon: <FileText className="w-4 h-4" /> },
-          { id: 'cards', label: 'الكروت ورموز QR', icon: <CreditCard className="w-4 h-4" /> },
-          { id: 'points', label: 'تعديل النقاط الاستثنائي', icon: <Coins className="w-4 h-4" /> },
-          { id: 'settings', label: 'إعدادات المنظومة', icon: <Settings className="w-4 h-4" /> },
-          { id: 'jobs', label: 'المهام المجدولة (Jobs)', icon: <Clock className="w-4 h-4" /> },
-          { id: 'audit', label: 'سجل التدقيق (Audit Log)', icon: <FileText className="w-4 h-4" /> },
+          { id: 'content', label: 'تعديل المحتوى للواجهة الأمامية', icon: <Edit3 className="w-4 h-4 text-amber-400 shrink-0" /> },
+          { id: 'kpis', label: 'المؤشرات والـ KPIs', icon: <Activity className="w-4 h-4 shrink-0" /> },
+          { id: 'approvals', label: 'مركز الموافقات', icon: <CheckCircle className="w-4 h-4 shrink-0" /> },
+          { id: 'customers', label: 'إدارة العملاء', icon: <Users className="w-4 h-4 shrink-0" /> },
+          { id: 'businesses', label: 'المتاجر والشركاء', icon: <Store className="w-4 h-4 shrink-0" /> },
+          { id: 'store', label: 'صفحة المتجر', icon: <ShoppingBag className="w-4 h-4 shrink-0" /> },
+          { id: 'services', label: 'إدارة الخدمات', icon: <Tag className="w-4 h-4 shrink-0" /> },
+          { id: 'offers', label: 'إدارة العروض', icon: <Sparkles className="w-4 h-4 shrink-0" /> },
+          { id: 'governorates', label: 'تغطية المحافظات', icon: <MapPin className="w-4 h-4 shrink-0" /> },
+          { id: 'notifications', label: 'الإشعارات', icon: <Bell className="w-4 h-4 shrink-0" /> },
+          { id: 'news', label: 'الأخبار والتحديثات', icon: <FileText className="w-4 h-4 shrink-0" /> },
+          { id: 'cards', label: 'الكروت ورموز QR', icon: <CreditCard className="w-4 h-4 shrink-0" /> },
+          { id: 'points', label: 'تعديل النقاط الاستثنائي', icon: <Coins className="w-4 h-4 shrink-0" /> },
+          { id: 'settings', label: 'إعدادات المنظومة', icon: <Settings className="w-4 h-4 shrink-0" /> },
+          { id: 'jobs', label: 'المهام المجدولة (Jobs)', icon: <Clock className="w-4 h-4 shrink-0" /> },
+          { id: 'audit', label: 'سجل التدقيق (Audit Log)', icon: <FileText className="w-4 h-4 shrink-0" /> },
         ].map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               activeTab === tab.id
                 ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800/70 md:border-transparent'
             }`}
           >
             {tab.icon}
@@ -958,9 +968,17 @@ export const AdminDashboardPage: React.FC = () => {
       )}
 
       {/* ================= TAB 1: KPIS & METRICS ================= */}
-      {/* ================= TAB: PRODUCTS ================= */}
-      {activeTab === 'products' && (
-        <AdminProductsManager products={products} onAdd={handleCreateProduct} onUpdate={handleUpdateProduct} onDelete={handleDeleteProduct} />
+      {/* ================= TAB: STORE ================= */}
+      {activeTab === 'store' && (
+        <AdminStorePage
+          products={products}
+          orders={orders}
+          onAddProduct={handleCreateProduct}
+          onUpdateProduct={handleUpdateProduct}
+          onDeleteProduct={handleDeleteProduct}
+          onUpdateOrderStatus={handleUpdateOrderStatus}
+          onRefresh={loadData}
+        />
       )}
 
       {/* ================= TAB: CUSTOMERS ================= */}
@@ -1455,11 +1473,13 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* ================= TAB 7: SETTINGS ================= */}
       {activeTab === 'settings' && (
-        <div className="p-6 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl space-y-8">
+        <div className="p-5 sm:p-6 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl space-y-6 sm:space-y-8">
           <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-2">
             <Settings className="w-4 h-4 text-sky-400" />
             <span>إعدادات وقواعد عمل المنظومة (System Settings)</span>
           </h3>
+
+          <BiometricSetupCard compact />
 
           {/* Maintenance Mode Toggle */}
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-700 space-y-4">

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api, setStoredTokens, clearStoredTokens, getStoredTokens } from '../api/client';
 import { User, Customer, Business, Employee, Card, PointAccount, UserRole } from '../types';
+import { performBiometricAuthentication } from '../utils/webauthn';
 
 interface AuthContextType {
   user: User | null;
@@ -10,7 +11,8 @@ interface AuthContextType {
   card: Card | null;
   pointAccount: PointAccount | null;
   isLoading: boolean;
-  login: (phone: string, password: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<User | null>;
+  loginWithBiometric: (phone?: string) => Promise<User | null>;
   registerCustomer: (data: any) => Promise<void>;
   registerBusiness: (data: any) => Promise<void>;
   logout: () => void;
@@ -55,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchProfile();
   }, []);
 
-  const login = async (phone: string, password: string) => {
+  const login = async (phone: string, password: string): Promise<User | null> => {
     setIsLoading(true);
     try {
       const data = await api.login(phone, password);
@@ -65,6 +67,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBusiness(data.business || null);
       setEmployee(data.employee || null);
       await fetchProfile();
+      return data.user || null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithBiometric = async (phone?: string): Promise<User | null> => {
+    setIsLoading(true);
+    try {
+      const data = await performBiometricAuthentication(phone);
+      setStoredTokens(data.accessToken, data.refreshToken);
+      setUser(data.user);
+      setCustomer(data.customer || null);
+      setBusiness(data.business || null);
+      setEmployee(data.employee || null);
+      await fetchProfile();
+      return data.user || null;
     } finally {
       setIsLoading(false);
     }
@@ -136,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         pointAccount,
         isLoading,
         login,
+        loginWithBiometric,
         registerCustomer,
         registerBusiness,
         logout,

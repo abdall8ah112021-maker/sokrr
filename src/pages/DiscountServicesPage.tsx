@@ -52,18 +52,18 @@ export const DiscountServicesPage: React.FC<DiscountServicesPageProps> = ({ setC
             هذه الصفحة مخصصة للعملاء المسجلين في المنظومة فقط. يرجى تسجيل الدخول أو إنشاء حساب جديد للاستفادة من أقوى الخصومات والعروض المخصصة لمحافظتك.
           </p>
         </div>
-        <div className="flex items-center justify-center gap-3 pt-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 pt-4">
           <button
             type="button"
             onClick={() => setCurrentTab('login')}
-            className="py-3 px-7 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm shadow-lg shadow-sky-500/20 transition-all"
+            className="w-full sm:w-auto py-3 px-7 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm shadow-lg shadow-sky-500/20 transition-all"
           >
             تسجيل الدخول الآن
           </button>
           <button
             type="button"
             onClick={() => setCurrentTab('register-customer')}
-            className="py-3 px-7 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm border border-slate-700 transition-all"
+            className="w-full sm:w-auto py-3 px-7 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm border border-slate-700 transition-all"
           >
             إنشاء حساب جديد
           </button>
@@ -73,26 +73,26 @@ export const DiscountServicesPage: React.FC<DiscountServicesPageProps> = ({ setC
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8 text-right">
+    <div className="max-w-6xl mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8 text-right">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-sky-950/70 border border-sky-400/30 text-sky-300 text-xs font-bold mb-1">
             <Sparkles className="w-3.5 h-3.5 text-sky-400" />
             <span>عروض وخصومات حصرية للأعضاء</span>
           </div>
-          <h1 className="text-3xl font-black text-white">صفحة "خصمك عندنا"</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">صفحة "خصمك عندنا"</h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
             استمتع بأقوى الخصومات والخدمات الخاصة بأعضاء Sugar Business في محافظتك.
           </p>
         </div>
 
         {/* Governorate Filter */}
-        <div className="flex items-center gap-2 bg-[#0c101c] p-2 rounded-2xl border border-slate-800">
+        <div className="flex items-center gap-2 bg-[#0c101c] p-2 rounded-2xl border border-slate-800 w-full sm:w-auto">
           <MapPin className="w-4 h-4 text-sky-400 shrink-0 mr-1" />
           <select
             value={selectedGov}
             onChange={(e) => setSelectedGov(e.target.value)}
-            className="bg-slate-900 text-white text-xs py-1.5 px-3 rounded-xl border border-slate-700 focus:border-sky-400 outline-none text-right"
+            className="flex-1 sm:flex-initial bg-slate-900 text-white text-xs py-2 px-3 rounded-xl border border-slate-700 focus:border-sky-400 outline-none text-right"
           >
             <option value="">جميع المحافظات</option>
             {governorates.map((g) => (

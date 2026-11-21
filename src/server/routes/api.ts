@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Router } from 'express';
 import { db } from '../db';
 import {
@@ -6,6 +7,8 @@ import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
+  createSignedChallengeToken,
+  verifySignedChallengeToken,
   requireAuth,
   requireRole,
   requirePermission,
@@ -187,14 +190,33 @@ apiRouter.post('/auth/login', (req, res) => {
     return;
   }
 
+  const formatArabicDuration = (minutes: number) => {
+    if (minutes === 1) return 'دقيقة واحدة';
+    if (minutes === 2) return 'دقيقتين';
+    if (minutes >= 3 && minutes <= 10) return `${minutes} دقائق`;
+    return `${minutes} دقيقة`;
+  };
+
   // Check lockout
   if (user.lockoutUntil && new Date(user.lockoutUntil).getTime() > Date.now()) {
-    const remainingMinutes = Math.ceil((new Date(user.lockoutUntil).getTime() - Date.now()) / (60 * 1000));
+    const remainingMs = new Date(user.lockoutUntil).getTime() - Date.now();
+    const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+    const remainingMinutes = Math.ceil(remainingSeconds / 60);
+    const waitText =
+      remainingSeconds < 60
+        ? `${remainingSeconds} ثانية`
+        : formatArabicDuration(remainingMinutes);
+
     res.status(423).json({
       success: false,
       error: {
         code: 'ACCOUNT_LOCKED',
-        message: `تم قفل الحساب مؤقتاً لتجاوز عدد المحاولات الخاطئة. يرجى المحاولة بعد ${remainingMinutes} دقيقة.`,
+        message: `تم إيقاف محاولات تسجيل الدخول مؤقتاً لتجاوز المحاولات المسموحة. يرجى الانتظار ${waitText}.`,
+        details: {
+          lockUntil: user.lockoutUntil,
+          remainingSeconds,
+          failedAttempts: user.failedLoginAttempts,
+        },
       },
     });
     return;
@@ -205,12 +227,20 @@ apiRouter.post('/auth/login', (req, res) => {
     const attempt = db.recordLoginAttempt(phone, false, ip);
     const remainingAttempts = Math.max(0, 5 - user.failedLoginAttempts);
 
-    if (attempt.locked) {
+    if (attempt.locked && attempt.lockUntil) {
+      const lockMinutes = attempt.lockDurationMinutes || 1;
+      const durationText = formatArabicDuration(lockMinutes);
       res.status(423).json({
         success: false,
         error: {
           code: 'ACCOUNT_LOCKED',
-          message: 'تم قفل الحساب مؤقتاً لمدة 5 دقائق بعد 5 محاولات دخول فاشلة متتالية.',
+          message: `تم إدخال كلمة المرور بشكل خاطئ أكثر من 5 مرات (${user.failedLoginAttempts} محاولات). يرجى الانتظار ${durationText} قبل المحاولة مرة أخرى (يتضاعف وقت الانتظار 5 أضعاف مع كل خطأ إضافي).`,
+          details: {
+            lockUntil: attempt.lockUntil,
+            remainingSeconds: lockMinutes * 60,
+            lockDurationMinutes: lockMinutes,
+            failedAttempts: user.failedLoginAttempts,
+          },
         },
       });
       return;
@@ -220,7 +250,14 @@ apiRouter.post('/auth/login', (req, res) => {
       success: false,
       error: {
         code: 'INVALID_CREDENTIALS',
-        message: `بيانات الدخول غير صحيحة. متبقي ${remainingAttempts} محاولات قبل قفل الحساب مؤقتاً.`,
+        message:
+          remainingAttempts === 0
+            ? 'بيانات الدخول غير صحيحة. تم استنفاد الـ 5 محاولات؛ الخطأ القادم سيفرض فترة انتظار تبدأ بدقيقة وتضاعف 5 أضعاف كل مرة.'
+            : `بيانات الدخول غير صحيحة. متبقي ${remainingAttempts} محاولات قبل فرض فترة الانتظار.`,
+        details: {
+          remainingAttempts,
+          failedAttempts: user.failedLoginAttempts,
+        },
       },
     });
     return;
@@ -314,6 +351,390 @@ apiRouter.get('/auth/me', requireAuth, (req: AuthenticatedRequest, res) => {
       employee,
       card,
       pointAccount,
+    },
+  });
+});
+
+// ----------------------------------------------------
+// WEBAUTHN / BIOMETRIC AUTHENTICATION (Fingerprint / Face ID)
+// ----------------------------------------------------
+function decodeClientDataJSON(clientDataB64: string): { type?: string; challenge?: string; origin?: string } | null {
+  try {
+    const raw = Buffer.from(clientDataB64, 'base64url').toString('utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function parseAuthenticatorDataFlags(authDataB64: string): { up: boolean; uv: boolean; signCount: number } | null {
+  try {
+    const buf = Buffer.from(authDataB64, 'base64url');
+    if (buf.length < 37) return null;
+    const flags = buf[32];
+    const up = (flags & 0x01) !== 0;
+    const uv = (flags & 0x04) !== 0;
+    const signCount = buf.readUInt32BE(33);
+    return { up, uv, signCount };
+  } catch {
+    return null;
+  }
+}
+
+function verifyWebAuthnAssertionSignature(
+  publicKeySpkiB64: string,
+  authenticatorDataB64: string,
+  clientDataB64: string,
+  signatureB64: string
+): boolean {
+  try {
+    if (!publicKeySpkiB64) return false;
+    const authDataBuf = Buffer.from(authenticatorDataB64, 'base64url');
+    const clientDataHash = crypto
+      .createHash('sha256')
+      .update(Buffer.from(clientDataB64, 'base64url'))
+      .digest();
+    const signedData = Buffer.concat([authDataBuf, clientDataHash]);
+    const keyObj = crypto.createPublicKey({
+      key: Buffer.from(publicKeySpkiB64, 'base64url'),
+      format: 'der',
+      type: 'spki',
+    });
+    const sigBuf = Buffer.from(signatureB64, 'base64url');
+    return crypto.verify('sha256', signedData, keyObj, sigBuf);
+  } catch {
+    return false;
+  }
+}
+
+apiRouter.get('/auth/webauthn/credentials', requireAuth, (req: AuthenticatedRequest, res) => {
+  const credentials = db.getBiometricCredentialsByUserId(req.user!.id).map((c) => ({
+    id: c.id,
+    credentialId: c.credentialId,
+    deviceName: c.deviceName,
+    createdAt: c.createdAt,
+    lastUsedAt: c.lastUsedAt,
+  }));
+
+  res.json({ success: true, data: { credentials } });
+});
+
+apiRouter.post('/auth/webauthn/register-options', requireAuth, (req: AuthenticatedRequest, res) => {
+  const user = db.findUserById(req.user!.id);
+  if (!user) {
+    res.status(404).json({ success: false, error: { code: 'USER_NOT_FOUND', message: 'الحساب غير موجود' } });
+    return;
+  }
+
+  const customer = db.findCustomerByUserId(user.id);
+  const business = db.findBusinessByUserId(user.id);
+  const displayName = customer?.fullName || business?.businessName || user.phone;
+
+  const challenge = crypto.randomBytes(32).toString('base64url');
+  const challengeToken = createSignedChallengeToken({
+    challenge,
+    type: 'register',
+    userId: user.id,
+    phone: user.phone,
+  });
+
+  const existingCreds = db.getBiometricCredentialsByUserId(user.id).map((c) => ({
+    id: c.credentialId,
+    type: 'public-key' as const,
+    transports: c.transports || ['internal'],
+  }));
+
+  res.json({
+    success: true,
+    data: {
+      challenge,
+      challengeToken,
+      user: {
+        id: Buffer.from(user.id, 'utf-8').toString('base64url'),
+        name: user.phone,
+        displayName,
+      },
+      rp: {
+        name: 'Sugar Business',
+      },
+      excludeCredentials: existingCreds,
+    },
+  });
+});
+
+apiRouter.post('/auth/webauthn/register-verify', requireAuth, (req: AuthenticatedRequest, res) => {
+  const { challengeToken, credential, deviceName } = req.body || {};
+
+  if (!challengeToken || !credential?.id || !credential?.response?.clientDataJSON) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'INVALID_PAYLOAD', message: 'بيانات التحقق البيومتري غير مكتملة' },
+    });
+    return;
+  }
+
+  const tokenPayload = verifySignedChallengeToken(challengeToken);
+  if (!tokenPayload || tokenPayload.type !== 'register' || tokenPayload.userId !== req.user!.id) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'EXPIRED_CHALLENGE', message: 'انتهت صلاحية جلسة التحقق، يرجى المحاولة مجدداً' },
+    });
+    return;
+  }
+
+  const clientData = decodeClientDataJSON(credential.response.clientDataJSON);
+  if (!clientData || clientData.type !== 'webauthn.create' || clientData.challenge !== tokenPayload.challenge) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'CHALLENGE_MISMATCH', message: 'فشل مطابقة التحدي الأمني للبصمة' },
+    });
+    return;
+  }
+
+  const saved = db.addBiometricCredential({
+    userId: req.user!.id,
+    credentialId: String(credential.id),
+    publicKey: credential.response.publicKey ? String(credential.response.publicKey) : '',
+    algorithm: typeof credential.response.publicKeyAlgorithm === 'number' ? credential.response.publicKeyAlgorithm : -7,
+    counter: 0,
+    deviceName: typeof deviceName === 'string' && deviceName.trim() ? deviceName.trim() : 'جهاز موثوق',
+    transports: Array.isArray(credential.response.transports) ? credential.response.transports : ['internal'],
+  });
+
+  db.recordAuditLog({
+    actorId: req.user!.id,
+    actorRole: req.user!.role,
+    action: 'BIOMETRIC_CREDENTIAL_REGISTERED',
+    entity: 'USER',
+    entityId: req.user!.id,
+    ip: req.ip || req.socket.remoteAddress,
+    reason: `تم تفعيل الدخول بالبصمة/الوجه على الجهاز: ${saved.deviceName}`,
+  });
+
+  res.status(201).json({
+    success: true,
+    data: {
+      credential: {
+        id: saved.id,
+        credentialId: saved.credentialId,
+        deviceName: saved.deviceName,
+        createdAt: saved.createdAt,
+      },
+      message: 'تم تفعيل الدخول بالبصمة / الوجه بنجاح على هذا الجهاز',
+    },
+  });
+});
+
+apiRouter.delete('/auth/webauthn/credentials/:id', requireAuth, (req: AuthenticatedRequest, res) => {
+  const removed = db.deleteBiometricCredential(req.params.id, req.user!.id);
+  if (!removed) {
+    res.status(404).json({
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'بيانات البصمة غير موجودة' },
+    });
+    return;
+  }
+
+  db.recordAuditLog({
+    actorId: req.user!.id,
+    actorRole: req.user!.role,
+    action: 'BIOMETRIC_CREDENTIAL_REMOVED',
+    entity: 'USER',
+    entityId: req.user!.id,
+    reason: 'إزالة جهاز موثوق للدخول البيومتري',
+  });
+
+  res.json({ success: true, data: { message: 'تم إلغاء ربط البصمة لهذا الجهاز بنجاح' } });
+});
+
+apiRouter.post('/auth/webauthn/login-options', (req, res) => {
+  const { phone, credentialId } = req.body || {};
+  const cleanPhone = typeof phone === 'string' ? phone.trim() : '';
+
+  let allowCredentials: Array<{ id: string; type: 'public-key'; transports?: string[] }> = [];
+
+  if (cleanPhone) {
+    const userCreds = db.findBiometricCredentialsByPhone(cleanPhone);
+    if (userCreds.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'NO_BIOMETRIC_REGISTERED',
+          message: 'لم يتم تفعيل البصمة أو الوجه لهذا الحساب بعد. يرجى تسجيل الدخول بكلمة المرور ثم تفعيلها من لوحة التحكم.',
+        },
+      });
+      return;
+    }
+    allowCredentials = userCreds.map((c) => ({
+      id: c.credentialId,
+      type: 'public-key',
+      transports: c.transports || ['internal'],
+    }));
+  } else if (typeof credentialId === 'string' && credentialId.trim()) {
+    const cred = db.findBiometricCredentialByCredentialId(credentialId.trim());
+    if (cred) {
+      allowCredentials = [
+        {
+          id: cred.credentialId,
+          type: 'public-key',
+          transports: cred.transports || ['internal'],
+        },
+      ];
+    }
+  }
+
+  const challenge = crypto.randomBytes(32).toString('base64url');
+  const challengeToken = createSignedChallengeToken({
+    challenge,
+    type: 'login',
+    phone: cleanPhone || undefined,
+  });
+
+  res.json({
+    success: true,
+    data: {
+      challenge,
+      challengeToken,
+      allowCredentials,
+    },
+  });
+});
+
+apiRouter.post('/auth/webauthn/login-verify', (req, res) => {
+  const { challengeToken, credential } = req.body || {};
+  const ip = req.ip || req.socket.remoteAddress;
+
+  if (!challengeToken || !credential?.id || !credential?.response?.clientDataJSON || !credential?.response?.authenticatorData || !credential?.response?.signature) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'INVALID_PAYLOAD', message: 'استجابة التحقق البيومتري غير صالحة' },
+    });
+    return;
+  }
+
+  const tokenPayload = verifySignedChallengeToken(challengeToken);
+  if (!tokenPayload || tokenPayload.type !== 'login') {
+    res.status(400).json({
+      success: false,
+      error: { code: 'EXPIRED_CHALLENGE', message: 'انتهت صلاحية جلسة التحقق البيومتري، يرجى المحاولة مرة أخرى' },
+    });
+    return;
+  }
+
+  const clientData = decodeClientDataJSON(credential.response.clientDataJSON);
+  if (!clientData || clientData.type !== 'webauthn.get' || clientData.challenge !== tokenPayload.challenge) {
+    res.status(401).json({
+      success: false,
+      error: { code: 'CHALLENGE_MISMATCH', message: 'فشل التحقق من التحدي الأمني للبصمة' },
+    });
+    return;
+  }
+
+  const authFlags = parseAuthenticatorDataFlags(credential.response.authenticatorData);
+  if (!authFlags || !authFlags.up) {
+    res.status(401).json({
+      success: false,
+      error: { code: 'USER_NOT_PRESENT', message: 'لم يتم تأكيد التحقق من الهوية على الجهاز' },
+    });
+    return;
+  }
+
+  const storedCred = db.findBiometricCredentialByCredentialId(String(credential.id));
+  if (!storedCred) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: 'CREDENTIAL_NOT_FOUND',
+        message: 'هذه البصمة غير مرتبطة بأي حساب نشط على الخادم. يرجى الدخول بكلمة المرور وإعادة تفعيل البصمة.',
+      },
+    });
+    return;
+  }
+
+  const user = db.findUserById(storedCred.userId);
+  if (!user) {
+    res.status(401).json({
+      success: false,
+      error: { code: 'USER_NOT_FOUND', message: 'الحساب المرتبط بهذه البصمة غير موجود' },
+    });
+    return;
+  }
+
+  if (tokenPayload.phone && user.phone !== tokenPayload.phone) {
+    res.status(401).json({
+      success: false,
+      error: { code: 'PHONE_MISMATCH', message: 'البصمة المستخدمة لا تخص رقم الهاتف المدخل' },
+    });
+    return;
+  }
+
+  // Check lockout
+  if (user.lockoutUntil && new Date(user.lockoutUntil).getTime() > Date.now()) {
+    const remainingSeconds = Math.max(1, Math.ceil((new Date(user.lockoutUntil).getTime() - Date.now()) / 1000));
+    const remainingMinutes = Math.ceil(remainingSeconds / 60);
+    const waitText =
+      remainingSeconds < 60
+        ? `${remainingSeconds} ثانية`
+        : remainingMinutes === 1
+        ? 'دقيقة واحدة'
+        : `${remainingMinutes} دقيقة`;
+    res.status(423).json({
+      success: false,
+      error: {
+        code: 'ACCOUNT_LOCKED',
+        message: `تم إيقاف محاولات الدخول مؤقتاً. يرجى المحاولة بعد ${waitText}.`,
+        details: {
+          lockUntil: user.lockoutUntil,
+          remainingSeconds,
+          failedAttempts: user.failedLoginAttempts,
+        },
+      },
+    });
+    return;
+  }
+
+  // Verify cryptographic signature when SPKI public key was provided during registration
+  if (storedCred.publicKey) {
+    const sigOk = verifyWebAuthnAssertionSignature(
+      storedCred.publicKey,
+      credential.response.authenticatorData,
+      credential.response.clientDataJSON,
+      credential.response.signature
+    );
+    if (!sigOk) {
+      res.status(401).json({
+        success: false,
+        error: { code: 'INVALID_SIGNATURE', message: 'فشل التحقق التشفيري من البصمة' },
+      });
+      return;
+    }
+  }
+
+  db.updateBiometricCredentialUsage(storedCred.id, authFlags.signCount);
+  db.recordLoginAttempt(user.phone, true, ip);
+
+  const customer = db.findCustomerByUserId(user.id);
+  const business = db.findBusinessByUserId(user.id);
+  const employee = db.findEmployeeByUserId(user.id);
+
+  const accessToken = generateAccessToken(user);
+  const { token: refreshToken } = generateRefreshToken(user);
+
+  res.json({
+    success: true,
+    data: {
+      user: {
+        id: user.id,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      },
+      customer,
+      business,
+      employee,
+      accessToken,
+      refreshToken,
     },
   });
 });
@@ -527,8 +948,8 @@ apiRouter.post('/transactions/purchase', requireAuth, (req: AuthenticatedRequest
       success: true,
       data: {
         transactionId: result.transaction.transactionId,
-        pointsAwarded: result.pointsAwarded,
-        message: `تم تأكيد العملية وإضافة ${result.pointsAwarded} نقطة بنجاح لرصيد العميل.`,
+        pointsAwarded: 0,
+        message: 'تم التحقق من الكارت وتسجيل الفاتورة بنجاح (بدون إضافة نقاط — تُكتسب النقاط عند الشراء من متجر الموقع الرسمي فقط).',
       },
     });
   } catch (err: any) {
@@ -695,44 +1116,6 @@ apiRouter.get('/services/:id', (req, res) => {
   res.json({ success: true, data: srv });
 });
 
-apiRouter.post('/services/requests', requireAuth, (req: AuthenticatedRequest, res) => {
-  const customer = db.findCustomerByUserId(req.user!.id);
-  if (!customer) {
-    res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'طلب الخدمات متاح للعملاء المسجلين فقط' } });
-    return;
-  }
-
-  const { serviceId, customerNotes } = req.body;
-  if (!serviceId) {
-    res.status(400).json({ success: false, error: { code: 'MISSING_SERVICE', message: 'يرجى اختيار الخدمة المطلوبة' } });
-    return;
-  }
-
-  const request = db.createServiceRequest({
-    customerId: customer.id,
-    serviceId,
-    customerNotes,
-  });
-
-  res.status(201).json({
-    success: true,
-    data: {
-      request,
-      message: `تم استلام طلب الخدمة برقم ${request.requestNumber}. سيقوم فريق الإدارة بمراجعته والتنسيق مع أفضل شريك معتمد.`,
-    },
-  });
-});
-
-apiRouter.get('/services/requests/my-requests', requireAuth, (req: AuthenticatedRequest, res) => {
-  const customer = db.findCustomerByUserId(req.user!.id);
-  if (!customer) {
-    res.json({ success: true, data: [] });
-    return;
-  }
-  const reqs = db.getServiceRequests(customer.id);
-  res.json({ success: true, data: reqs });
-});
-
 // ----------------------------------------------------
 // OFFERS
 // ----------------------------------------------------
@@ -841,7 +1224,10 @@ apiRouter.post('/orders', requireAuth, (req: AuthenticatedRequest, res) => {
       success: true,
       data: {
         order,
-        message: `تم إنشاء الطلب رقم ${order.orderNumber} بنجاح.`,
+        message:
+          order.pointsEarned && order.pointsEarned > 0
+            ? `تم إنشاء الطلب رقم ${order.orderNumber} بنجاح وإضافة ${order.pointsEarned} نقطة لرصيدك.`
+            : `تم إنشاء الطلب رقم ${order.orderNumber} بنجاح.`,
       },
     });
   } catch (err: any) {
@@ -1095,28 +1481,102 @@ apiRouter.delete('/admin/discount-services/:id', requirePermission(Permissions.S
   res.json({ success });
 });
 
+apiRouter.get('/admin/products', requirePermission(Permissions.STORE_MANAGE), (req, res) => {
+  res.json({ success: true, data: db.getAllProducts() });
+});
+
 apiRouter.post('/admin/products', requirePermission(Permissions.STORE_MANAGE), (req: AuthenticatedRequest, res) => {
   try {
-    const { name, categoryId, description, cashPrice, pointsPrice, paymentType, images, status } = req.body;
-    if (!name || !cashPrice) {
-      res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'اسم المنتج والسعر مطلوبان' } });
+    const {
+      name,
+      categoryId,
+      description,
+      cashPrice,
+      pointsPrice,
+      rewardPoints,
+      discount,
+      paymentType,
+      images,
+      status,
+      inventory,
+      lowStockThreshold,
+    } = req.body;
+    const type = paymentType === 'POINTS' ? 'POINTS' : 'CASH';
+    if (!name || (type === 'CASH' && (cashPrice === undefined || Number(cashPrice) < 0)) || (type === 'POINTS' && (!pointsPrice || Number(pointsPrice) <= 0))) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'MISSING_FIELDS', message: 'يرجى إدخال اسم المنتج والسعر المناسب (نقدي أو بالنقاط)' },
+      });
       return;
     }
+    const cleanImages = Array.isArray(images) && images.filter(Boolean).length > 0
+      ? images.filter(Boolean)
+      : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80'];
     const product = db.createProduct({
-      name,
+      name: String(name).trim(),
       categoryId: categoryId || 'cat_01',
       description: description || '',
-      cashPrice: Number(cashPrice),
+      cashPrice: Number(cashPrice || 0),
       pointsPrice: Number(pointsPrice || 0),
-      paymentType: paymentType || 'CASH',
-      images: images || ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80'],
-      inventory: Number(req.body.inventory || 100),
-      lowStockThreshold: Number(req.body.lowStockThreshold || 5),
+      rewardPoints: rewardPoints !== undefined ? Number(rewardPoints) : undefined,
+      discount: discount !== undefined ? Number(discount) : 0,
+      paymentType: type,
+      images: cleanImages,
+      inventory: Number(inventory ?? 100),
+      lowStockThreshold: Number(lowStockThreshold ?? 5),
       status: status || 'ACTIVE',
     });
     res.status(201).json({ success: true, data: product });
   } catch (err: any) {
     res.status(400).json({ success: false, error: { code: 'ERROR', message: err.message } });
+  }
+});
+
+apiRouter.put('/admin/products/:id', requirePermission(Permissions.STORE_MANAGE), (req: AuthenticatedRequest, res) => {
+  try {
+    const updated = db.updateProduct(req.params.id, req.body || {});
+    if (!updated) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'المنتج غير موجود' } });
+      return;
+    }
+    res.json({ success: true, data: updated });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: { code: 'ERROR', message: err.message } });
+  }
+});
+
+apiRouter.delete('/admin/products/:id', requirePermission(Permissions.STORE_MANAGE), (req: AuthenticatedRequest, res) => {
+  const removed = db.deleteProduct(req.params.id);
+  if (!removed) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'المنتج غير موجود' } });
+    return;
+  }
+  res.json({ success: true, data: { message: 'تم حذف المنتج بنجاح' } });
+});
+
+apiRouter.get('/admin/orders', requirePermission(Permissions.ORDERS_READ), (req, res) => {
+  res.json({ success: true, data: db.getAllOrdersWithCustomer() });
+});
+
+apiRouter.put('/admin/orders/:id/status', requirePermission(Permissions.ORDERS_UPDATE), (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, note } = req.body || {};
+    if (!status) {
+      res.status(400).json({ success: false, error: { code: 'MISSING_STATUS', message: 'حالة الطلب الجديدة مطلوبة' } });
+      return;
+    }
+    const updated = db.updateOrderStatus(req.params.id, status, note || `تحديث حالة الطلب بواسطة الإدارة إلى ${status}`);
+    db.recordAuditLog({
+      actorId: req.user!.id,
+      actorRole: req.user!.role,
+      action: `ORDER_STATUS_${status}`,
+      entity: 'ORDER',
+      entityId: updated.id,
+      reason: note || `تغيير حالة الطلب ${updated.orderNumber} إلى ${status}`,
+    });
+    res.json({ success: true, data: updated });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: { code: 'ORDER_UPDATE_ERROR', message: err.message } });
   }
 });
 

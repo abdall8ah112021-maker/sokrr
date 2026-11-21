@@ -8,9 +8,7 @@ export type CardStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'BLOCKED' | 'EXPIR
 
 export type CardAction = 'ISSUE' | 'ASSIGN' | 'SUSPEND' | 'BLOCK' | 'REPLACE';
 
-export type PointLedgerType = 'EARN' | 'SPEND' | 'EXPIRE' | 'REVERSE' | 'RESERVE' | 'RELEASE' | 'ADJUSTMENT';
-
-export type ServiceRequestStatus = 'NEW' | 'UNDER_REVIEW' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type PointLedgerType = 'EARN' | 'SPEND' | 'EXPIRE' | 'REVERSE' | 'ADJUSTMENT';
 
 export type DiscountType = 'PERCENTAGE' | 'FIXED';
 

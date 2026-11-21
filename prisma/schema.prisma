@@ -53,18 +53,7 @@ enum PointLedgerType {
   SPEND
   EXPIRE
   REVERSE
-  RESERVE
-  RELEASE
   ADJUSTMENT
-}
-
-enum ServiceRequestStatus {
-  NEW
-  UNDER_REVIEW
-  ACCEPTED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
 }
 
 enum DiscountType {
@@ -159,9 +148,10 @@ model User {
   customer            Customer?
   business            Business?
   employee            Employee?
-  refreshTokens       RefreshToken[]
-  notifications       Notification[]
-  auditLogs           AuditLog[]     @relation("ActorAuditLogs")
+  refreshTokens        RefreshToken[]
+  biometricCredentials BiometricCredential[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]     @relation("ActorAuditLogs")
 
   @@index([phone])
   @@index([role, status])
@@ -177,6 +167,23 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model BiometricCredential {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId String    @unique
+  publicKey    String
+  algorithm    Int       @default(-7)
+  counter      Int       @default(0)
+  deviceName   String
+  transports   Json?
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  @@index([userId])
+  @@index([credentialId])
 }
 
 // ----------------------------------------------------
@@ -200,7 +207,6 @@ model Customer {
   cards           Card[]
   pointAccount    PointAccount?
   orders          Order[]
-  serviceRequests ServiceRequest[]
   favorites       Favorite[]
   reviews         Review[]
   supportTickets  SupportTicket[]
@@ -335,7 +341,6 @@ model Business {
   employees       Employee[]
   offers          Offer[]
   transactions    Transaction[]
-  serviceRequests ServiceRequest[]
   reviews         Review[]
   favorites       Favorite[]
 
@@ -418,33 +423,9 @@ model Service {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  requests         ServiceRequest[]
   offerServices    OfferService[]
 
   @@index([sectorId])
-}
-
-model ServiceRequest {
-  id                 String               @id @default(uuid())
-  requestNumber      String               @unique
-  customerId         String
-  customer           Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  serviceId          String
-  service            Service              @relation(fields: [serviceId], references: [id])
-  businessId         String?
-  business           Business?            @relation(fields: [businessId], references: [id])
-  status             ServiceRequestStatus @default(NEW)
-  customerNotes      String?
-  adminNotes         String?
-  cancellationReason String?
-  rating             Int?
-  ratingComment      String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-
-  @@index([customerId])
-  @@index([serviceId])
-  @@index([status])
 }
 
 // ----------------------------------------------------
@@ -504,6 +485,7 @@ model Product {
   paymentType       PaymentType
   cashPrice         Float           @default(0)
   pointsPrice       Int             @default(0)
+  rewardPoints      Int             @default(0)
   inventory         Int             @default(0)
   lowStockThreshold Int             @default(5)
   status            ProductStatus   @default(ACTIVE)
@@ -548,6 +530,7 @@ model Order {
   deliveryFee        Float        @default(0)
   totalCash          Float        @default(0)
   totalPoints        Int          @default(0)
+  pointsEarned       Int          @default(0)
   deliveryAddress    Json
   cancellationReason String?
   statusTimeline     Json

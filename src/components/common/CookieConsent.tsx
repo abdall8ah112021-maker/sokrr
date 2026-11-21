@@ -31,7 +31,7 @@ export const CookieConsent: React.FC = () => {
   return (
     <aside
       aria-label="إعدادات ملفات تعريف الارتباط"
-      className="fixed bottom-6 right-6 max-w-md w-[calc(100%-3rem)] bg-[#0d121f]/95 border border-sky-500/30 rounded-2xl shadow-2xl p-5 z-50 text-right backdrop-blur-md"
+      className="fixed bottom-3 left-3 right-3 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-md bg-[#0d121f]/95 border border-sky-500/30 rounded-2xl shadow-2xl p-4 sm:p-5 z-50 text-right backdrop-blur-md"
     >
       <div className="flex items-center gap-2.5 text-sky-400 mb-2">
         <Shield className="w-5 h-5" />

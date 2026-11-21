@@ -138,7 +138,13 @@ function AppContent() {
       case 'register-business':
         return <RegisterBusinessPage setCurrentTab={setCurrentTab} />;
       case 'customer-dashboard':
-        return <CustomerDashboardPage setCurrentTab={setCurrentTab} setSelectedOrderId={setSelectedOrderId} />;
+        return (
+          <CustomerDashboardPage
+            setCurrentTab={setCurrentTab}
+            setSelectedOrderId={setSelectedOrderId}
+            setSelectedProductId={setSelectedProductId}
+          />
+        );
       case 'business-dashboard':
         return <BusinessDashboardPage />;
       case 'admin-dashboard':

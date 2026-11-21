@@ -118,6 +118,18 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             )}
           </div>
 
+          {product.paymentType === 'CASH' && (
+            <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/30 flex items-center justify-between text-xs">
+              <span className="text-amber-200 font-semibold flex items-center gap-2">
+                <Coins className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>نقاط المكافأة المكتسبة من شراء هذا المنتج:</span>
+              </span>
+              <span className="font-mono font-black text-amber-400 text-sm">
+                +{product.rewardPoints ?? Math.max(1, Math.round(((product.cashPrice || 0) / 100) * 10))} نقطة
+              </span>
+            </div>
+          )}
+
           {/* Description */}
           <div className="space-y-2">
             <h3 className="text-xs font-bold text-slate-300">الوصف والمواصفات:</h3>

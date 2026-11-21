@@ -12,6 +12,7 @@ interface AdminDataContextType {
   jobs: any[];
   auditLogs: any[];
   products: any[];
+  orders: any[];
   services: any[];
   offers: any[];
   governorates: any[];
@@ -28,7 +29,7 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     queryFn: async () => {
       const [
         metrics, businesses, customers, cards, systemSettings, 
-        jobs, auditLogs, health, services, offers, governorates, news, cmsPages, products
+        jobs, auditLogs, health, services, offers, governorates, news, cmsPages, products, orders
       ] = await Promise.all([
         api.getAdminMetrics(),
         api.getAllBusinesses(),
@@ -43,9 +44,10 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
         api.getGovernorates(),
         api.getNews(),
         api.getAllCMSPages(),
-        api.getProducts()
+        api.getAdminProducts().catch(() => api.getProducts()),
+        api.getAdminOrders().catch(() => [])
       ]);
-      return { metrics, businesses, customers, cards, systemSettings, jobs, auditLogs, health, services, offers, governorates, news, cmsPages, products };
+      return { metrics, businesses, customers, cards, systemSettings, jobs, auditLogs, health, services, offers, governorates, news, cmsPages, products, orders };
     }
   });
 
@@ -59,6 +61,7 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     jobs: data?.jobs || [],
     auditLogs: data?.auditLogs || [],
     products: data?.products || [],
+    orders: data?.orders || [],
     services: data?.services || [],
     offers: data?.offers || [],
     governorates: data?.governorates || [],

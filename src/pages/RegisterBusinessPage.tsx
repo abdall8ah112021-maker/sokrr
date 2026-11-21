@@ -59,8 +59,8 @@ export const RegisterBusinessPage: React.FC<RegisterBusinessPageProps> = ({ setC
 
   if (submitted) {
     return (
-      <div className="max-w-md mx-auto py-12 px-4 text-right">
-        <div className="p-8 rounded-3xl bg-[#0c101c] border border-amber-500/40 shadow-2xl text-center space-y-5">
+      <div className="max-w-md mx-auto py-6 sm:py-12 px-4 text-right">
+        <div className="p-5 sm:p-8 rounded-3xl bg-[#0c101c] border border-amber-500/40 shadow-2xl text-center space-y-5">
           <div className="w-16 h-16 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-400 mx-auto flex items-center justify-center">
             <Clock className="w-8 h-8" />
           </div>
@@ -98,15 +98,15 @@ export const RegisterBusinessPage: React.FC<RegisterBusinessPageProps> = ({ setC
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-12 px-4">
-      <div className="p-8 sm:p-10 rounded-3xl bg-[#0c101c] border border-slate-800 shadow-2xl text-right">
-        <div className="text-center mb-8">
+    <div className="max-w-2xl mx-auto py-6 sm:py-12 px-4">
+      <div className="p-5 sm:p-10 rounded-3xl bg-[#0c101c] border border-slate-800 shadow-2xl text-right">
+        <div className="text-center mb-6 sm:mb-8">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-cyan-300 p-0.5 mx-auto mb-3 shadow-lg shadow-sky-500/20">
             <div className="w-full h-full bg-[#080c16] rounded-[14px] flex items-center justify-center">
               <Store className="w-6 h-6 text-sky-400" />
             </div>
           </div>
-          <h2 className="text-2xl font-black text-white">تسجيل شريك تجاري معتمد</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-white">تسجيل شريك تجاري معتمد</h2>
           <p className="text-xs text-slate-400 mt-1">انضم لشبكة Sugar Business لكسب عملاء جدد ومكافأتهم بنقاط ولاء فورية</p>
         </div>
 

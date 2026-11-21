@@ -45,17 +45,17 @@ export const SmartFloatingButton: React.FC<SmartFloatingButtonProps> = ({ curren
   }
 
   return (
-    <aside aria-label="Smart Action Button" className="fixed bottom-5 left-5 z-40">
+    <aside aria-label="Smart Action Button" className="fixed bottom-3.5 left-3.5 sm:bottom-5 sm:left-5 z-40">
       <button
         type="button"
         onClick={action}
-        className="group flex items-center gap-2.5 bg-gradient-to-r from-sky-400 via-sky-300 to-cyan-300 text-slate-950 font-bold px-4 py-2.5 rounded-full shadow-xl shadow-sky-500/25 hover:shadow-sky-400/40 hover:scale-105 active:scale-95 transition-all duration-300 border border-white/20 text-xs sm:text-sm"
+        className="group flex items-center gap-2 bg-gradient-to-r from-sky-400 via-sky-300 to-cyan-300 text-slate-950 font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow-xl shadow-sky-500/25 hover:shadow-sky-400/40 hover:scale-105 active:scale-95 transition-all duration-300 border border-white/20 text-[11px] sm:text-sm"
       >
-        <span className="w-6 h-6 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center group-hover:rotate-12 transition-transform shadow-sm">
+        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center group-hover:rotate-12 transition-transform shadow-sm shrink-0">
           {icon}
         </span>
-        <span className="tracking-wide">{label}</span>
-        <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+        <span className="tracking-wide whitespace-nowrap">{label}</span>
+        <ArrowLeft className="hidden sm:inline w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
       </button>
     </aside>
   );

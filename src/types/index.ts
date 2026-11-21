@@ -6,9 +6,7 @@ export type AccountStatus = 'PENDING' | 'REQUIRES_CHANGES' | 'ACTIVE' | 'APPROVE
 
 export type CardStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'BLOCKED' | 'EXPIRED';
 
-export type PointLedgerType = 'EARN' | 'SPEND' | 'EXPIRE' | 'REVERSE' | 'RESERVE' | 'RELEASE' | 'ADJUSTMENT';
-
-export type ServiceRequestStatus = 'NEW' | 'UNDER_REVIEW' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type PointLedgerType = 'EARN' | 'SPEND' | 'EXPIRE' | 'REVERSE' | 'ADJUSTMENT';
 
 export type DiscountType = 'PERCENTAGE' | 'FIXED';
 
@@ -156,21 +154,6 @@ export interface Service {
   isActive: boolean;
 }
 
-export interface ServiceRequest {
-  id: string;
-  requestNumber: string;
-  customerId: string;
-  serviceId: string;
-  businessId?: string;
-  status: ServiceRequestStatus;
-  customerNotes?: string;
-  adminNotes?: string;
-  cancellationReason?: string;
-  rating?: number;
-  ratingComment?: string;
-  createdAt: string;
-}
-
 export interface Offer {
   id: string;
   businessId: string;
@@ -196,7 +179,8 @@ export interface Product {
   paymentType: PaymentType;
   cashPrice: number;
   pointsPrice: number;
-  discount: number;
+  rewardPoints?: number;
+  discount?: number;
   inventory: number;
   lowStockThreshold: number;
   status: ProductStatus;
@@ -223,6 +207,7 @@ export interface Order {
   deliveryFee: number;
   totalCash: number;
   totalPoints: number;
+  pointsEarned?: number;
   deliveryAddress: {
     title: string;
     recipient: string;

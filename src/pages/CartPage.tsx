@@ -39,6 +39,16 @@ export const CartPage: React.FC<CartPageProps> = ({ setCurrentTab, setSelectedOr
   const govObj = governorates.find((g) => g.nameAr === selectedGov);
   const deliveryFee = govObj ? govObj.deliveryFee : 45;
 
+  const estimatedEarnedPoints =
+    paymentType === 'CASH'
+      ? items.reduce((sum, item) => {
+          const pts =
+            item.product.rewardPoints ??
+            Math.max(1, Math.round(((item.product.cashPrice || 0) / 100) * 10));
+          return sum + pts * item.quantity;
+        }, 0)
+      : 0;
+
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -106,7 +116,7 @@ export const CartPage: React.FC<CartPageProps> = ({ setCurrentTab, setSelectedOr
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8 text-right">
+    <div className="max-w-6xl mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8 text-right">
       <div>
         <span className="text-xs font-bold text-sky-400 uppercase tracking-widest">تأكيد الشراء والشحن</span>
         <h1 className="text-2xl sm:text-3xl font-black text-white mt-1">سلة المشتريات وإتمام الطلب</h1>
@@ -125,9 +135,9 @@ export const CartPage: React.FC<CartPageProps> = ({ setCurrentTab, setSelectedOr
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
         {/* Items List */}
-        <div className="lg:col-span-7 p-6 rounded-3xl bg-[#0c101c] border border-slate-800 shadow-xl space-y-4">
+        <div className="lg:col-span-7 p-4 sm:p-6 rounded-3xl bg-[#0c101c] border border-slate-800 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-white">المنتجات المختارة ({items.length})</h3>
             <button
@@ -141,15 +151,15 @@ export const CartPage: React.FC<CartPageProps> = ({ setCurrentTab, setSelectedOr
 
           <div className="divide-y divide-slate-800/80">
             {items.map((item) => (
-              <div key={item.product.id} className="py-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
+              <div key={item.product.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 min-w-0">
                   <img
                     src={item.product.images[0]}
                     alt={item.product.name}
                     className="w-14 h-14 rounded-xl object-cover border border-slate-800 shrink-0"
                   />
-                  <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-white">{item.product.name}</h4>
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-xs sm:text-sm text-white truncate">{item.product.name}</h4>
                     <span className="text-[11px] text-slate-400 font-mono">
                       {paymentType === 'POINTS'
                         ? `${item.product.pointsPrice} نقطة للقطعة`
@@ -158,7 +168,7 @@ export const CartPage: React.FC<CartPageProps> = ({ setCurrentTab, setSelectedOr
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-end gap-3 shrink-0">
                   <div className="flex items-center border border-slate-700 rounded-lg bg-slate-900 px-2 py-1 text-xs font-mono">
                     <button
                       type="button"
@@ -220,7 +230,7 @@ export const CartPage: React.FC<CartPageProps> = ({ setCurrentTab, setSelectedOr
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-300 mb-1">المحافظة</label>
                 <select
@@ -285,6 +295,15 @@ export const CartPage: React.FC<CartPageProps> = ({ setCurrentTab, setSelectedOr
                   )}
                 </div>
               </div>
+              {paymentType === 'CASH' && estimatedEarnedPoints > 0 && (
+                <div className="flex justify-between items-center p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-300 mt-2">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <Coins className="w-4 h-4 text-amber-400" />
+                    <span>النقاط المكتسبة من هذا الطلب:</span>
+                  </span>
+                  <span className="font-mono font-black text-amber-400">+{estimatedEarnedPoints} نقطة</span>
+                </div>
+              )}
             </div>
 
             <button

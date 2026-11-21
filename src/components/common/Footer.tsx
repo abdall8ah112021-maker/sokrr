@@ -10,9 +10,9 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentTab }) => {
   const { content } = useSiteContent();
 
   return (
-    <footer className="bg-[#05070c] border-t border-slate-800/80 text-slate-300 mt-20 pt-16 pb-12">
+    <footer className="bg-[#05070c] border-t border-slate-800/80 text-slate-300 mt-12 sm:mt-20 pt-10 sm:pt-16 pb-24 sm:pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-slate-800/70 text-right">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 pb-10 sm:pb-12 border-b border-slate-800/70 text-right">
           {/* Col 1: Brand & Overview */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
@@ -26,14 +26,14 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentTab }) => {
             <p className="text-sm text-slate-400 leading-relaxed max-w-md">
               {content.footerTagline}
             </p>
-            <div className="flex items-center gap-4 text-xs text-sky-400/90 pt-2 font-mono">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-sky-400/90 pt-2 font-mono">
               <span className="flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-emerald-400" />
+                <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
                 بيانات مشفرة 256-bit
               </span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-sky-400" />
+                <CheckCircle className="w-4 h-4 text-sky-400 shrink-0" />
                 كروت بلاستيكية معتمدة
               </span>
             </div>
@@ -132,18 +132,18 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentTab }) => {
         </div>
 
         {/* Contact Strip & Copyright */}
-        <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-6">
+        <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center md:text-right">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2.5">
             <span className="flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-sky-400" />
+              <Phone className="w-3.5 h-3.5 text-sky-400 shrink-0" />
               {content.footerPhone}
             </span>
             <span className="flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-sky-400" />
+              <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
               {content.footerEmail}
             </span>
             <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-sky-400" />
+              <MapPin className="w-3.5 h-3.5 text-sky-400 shrink-0" />
               {content.footerAddress}
             </span>
           </div>

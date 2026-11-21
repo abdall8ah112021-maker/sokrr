@@ -140,6 +140,56 @@ export function verifyRefreshToken(token: string): TokenPayload | null {
 }
 
 // ----------------------------------------------------
+// WEBAUTHN STATELESS SIGNED CHALLENGE TOKENS (5-min TTL)
+// ----------------------------------------------------
+export interface WebAuthnChallengePayload {
+  challenge: string;
+  type: 'register' | 'login';
+  userId?: string;
+  phone?: string;
+  exp: number;
+}
+
+export function createSignedChallengeToken(
+  payload: Omit<WebAuthnChallengePayload, 'exp'>,
+  ttlSeconds = 300
+): string {
+  const fullPayload: WebAuthnChallengePayload = {
+    ...payload,
+    exp: Math.floor(Date.now() / 1000) + ttlSeconds,
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', ACCESS_SECRET)
+    .update(`webauthn.${payloadB64}`)
+    .digest('base64url');
+  return `${payloadB64}.${signature}`;
+}
+
+export function verifySignedChallengeToken(token: string): WebAuthnChallengePayload | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [payloadB64, signature] = parts;
+    const expectedSig = crypto
+      .createHmac('sha256', ACCESS_SECRET)
+      .update(`webauthn.${payloadB64}`)
+      .digest('base64url');
+    if (signature.length !== expectedSig.length) return null;
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+      return null;
+    }
+    const parsed: WebAuthnChallengePayload = JSON.parse(
+      Buffer.from(payloadB64, 'base64url').toString('utf-8')
+    );
+    if (!parsed.exp || Date.now() / 1000 > parsed.exp) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// ----------------------------------------------------
 // EXPRESS AUTHENTICATION & RBAC MIDDLEWARES
 // ----------------------------------------------------
 export interface AuthenticatedRequest extends Request {
@@ -164,7 +214,7 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
 
   if (payload) {
     const user = db.findUserById(payload.userId);
-    if (user && user.status === 'ACTIVE') {
+    if (user && (user.status === 'ACTIVE' || user.status === 'APPROVED')) {
       req.user = {
         id: user.id,
         phone: user.phone,

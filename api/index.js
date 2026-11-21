@@ -2,6 +2,7 @@
 import express from "express";
 
 // src/server/routes/api.ts
+import crypto3 from "crypto";
 import { Router } from "express";
 
 // src/server/db.ts
@@ -27,7 +28,34 @@ var SugarDatabase = class {
     if (fs.existsSync(this.filePath)) {
       try {
         const raw = fs.readFileSync(this.filePath, "utf-8");
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed.biometricCredentials)) {
+          parsed.biometricCredentials = [];
+        }
+        if ("serviceRequests" in parsed) {
+          delete parsed.serviceRequests;
+        }
+        if (Array.isArray(parsed.settings)) {
+          const merchantPts = parsed.settings.find((s) => s.key === "points_per_purchase");
+          if (merchantPts) {
+            merchantPts.value = "0";
+            merchantPts.description = "\u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0643\u062A\u0633\u0628\u0629 \u0645\u0646 \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u062A\u062C\u0627\u0631 (\u0645\u0644\u063A\u0627\u0629 - \u0627\u0644\u0646\u0642\u0627\u0637 \u062A\u064F\u0643\u0633\u0628 \u0645\u0646 \u0645\u062A\u062C\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0641\u0642\u0637)";
+          }
+          if (!parsed.settings.some((s) => s.key === "store_points_per_100_egp")) {
+            parsed.settings.push({
+              id: "set_store_pts",
+              key: "store_points_per_100_egp",
+              value: "10",
+              category: "points",
+              type: "number",
+              description: "\u0639\u062F\u062F \u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0643\u062A\u0633\u0628\u0629 \u0644\u0643\u0644 100 \u062C.\u0645 \u0639\u0646\u062F \u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0645\u0646 \u0645\u062A\u062C\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0631\u0633\u0645\u064A",
+              isSensitive: false,
+              updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+              updatedBy: "usr_super_admin_01"
+            });
+          }
+        }
+        return parsed;
       } catch {
       }
     }
@@ -75,7 +103,7 @@ var SugarDatabase = class {
         slug: "car-detailing-vip",
         icon: "Car",
         shortDescription: "\u062E\u062F\u0645\u0629 \u063A\u0633\u064A\u0644 \u0648\u0639\u0646\u0627\u064A\u0629 \u0648\u062A\u0644\u0645\u064A\u0639 \u0627\u062D\u062A\u0631\u0627\u0641\u064A \u0644\u0644\u0633\u064A\u0627\u0631\u0627\u062A \u0628\u062E\u0635\u0645 \u062D\u0635\u0631\u064A \u0644\u062D\u0627\u0645\u0644\u064A \u0627\u0644\u0643\u0627\u0631\u062A.",
-        fullDescription: "\u062A\u0634\u0645\u0644 \u0627\u0644\u062E\u062F\u0645\u0629 \u0641\u062D\u0635\u0627\u064B \u062F\u0642\u064A\u0642\u0627\u064B\u060C \u063A\u0633\u064A\u0644\u0627\u064B \u0628\u0627\u0644\u0628\u062E\u0627\u0631 \u062F\u0627\u062E\u0644\u064A\u0627\u064B \u0648\u062E\u0627\u0631\u062C\u064A\u0627\u064B\u060C \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u062C\u0644\u062F\u060C \u0648\u0637\u0628\u0642\u0629 \u0646\u0627\u0646\u0648 \u0633\u064A\u0631\u0627\u0645\u064A\u0643 \u0644\u062D\u0645\u0627\u064A\u0629 \u0637\u0644\u0627\u0621 \u0627\u0644\u0633\u064A\u0627\u0631\u0629 \u0645\u0639 \u0625\u0636\u0627\u0641\u0629 \u0646\u0642\u0627\u0637 \u0648\u0644\u0627\u0621 \u0641\u0648\u0631\u064A\u0629 \u0644\u062D\u0633\u0627\u0628\u0643.",
+        fullDescription: "\u062A\u0634\u0645\u0644 \u0627\u0644\u062E\u062F\u0645\u0629 \u0641\u062D\u0635\u0627\u064B \u062F\u0642\u064A\u0642\u0627\u064B\u060C \u063A\u0633\u064A\u0644\u0627\u064B \u0628\u0627\u0644\u0628\u062E\u0627\u0631 \u062F\u0627\u062E\u0644\u064A\u0627\u064B \u0648\u062E\u0627\u0631\u062C\u064A\u0627\u064B\u060C \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u062C\u0644\u062F\u060C \u0648\u0637\u0628\u0642\u0629 \u0646\u0627\u0646\u0648 \u0633\u064A\u0631\u0627\u0645\u064A\u0643 \u0644\u062D\u0645\u0627\u064A\u0629 \u0637\u0644\u0627\u0621 \u0627\u0644\u0633\u064A\u0627\u0631\u0629 \u0628\u062E\u0635\u0645 \u062E\u0627\u0635 \u0644\u0623\u0639\u0636\u0627\u0621 Sugar Business.",
         targetAudience: "\u0623\u0635\u062D\u0627\u0628 \u0627\u0644\u0633\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0628\u0627\u062D\u062B\u064A\u0646 \u0639\u0646 \u062E\u062F\u0645\u0629 \u0639\u0646\u0627\u064A\u0629 \u0645\u062A\u0643\u0627\u0645\u0644\u0629 \u0648\u0645\u0636\u0645\u0648\u0646\u0629",
         sectorId: "sec_04",
         isActive: true,
@@ -142,6 +170,7 @@ var SugarDatabase = class {
         paymentType: "CASH",
         cashPrice: 1250,
         pointsPrice: 0,
+        rewardPoints: 125,
         inventory: 18,
         lowStockThreshold: 4,
         status: "ACTIVE",
@@ -159,6 +188,7 @@ var SugarDatabase = class {
         paymentType: "POINTS",
         pointsPrice: 300,
         cashPrice: 0,
+        rewardPoints: 0,
         inventory: 22,
         lowStockThreshold: 5,
         status: "ACTIVE",
@@ -176,6 +206,7 @@ var SugarDatabase = class {
         paymentType: "CASH",
         cashPrice: 890,
         pointsPrice: 0,
+        rewardPoints: 90,
         inventory: 14,
         lowStockThreshold: 3,
         status: "ACTIVE",
@@ -217,8 +248,8 @@ var SugarDatabase = class {
       {
         id: "faq_02",
         category: "\u0627\u0644\u0646\u0642\u0627\u0637 \u0648\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A",
-        question: "\u0643\u0645 \u0639\u062F\u062F \u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u064A \u0623\u062D\u0635\u0644 \u0639\u0644\u064A\u0647\u0627 \u0645\u0639 \u0643\u0644 \u0639\u0645\u0644\u064A\u0629 \u0634\u0631\u0627\u0621\u061F",
-        answer: "\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0647\u064A 10 \u0646\u0642\u0627\u0637 \u0644\u0643\u0644 \u0639\u0645\u0644\u064A\u0629 \u0634\u0631\u0627\u0621 \u0645\u0624\u0643\u062F\u0629 \u0639\u0628\u0631 \u0645\u0633\u062D \u0627\u0644\u0643\u0627\u0631\u062A\u060C \u0648\u0642\u062F \u062A\u0645\u0646\u062D \u0628\u0639\u0636 \u0627\u0644\u0645\u062A\u0627\u062C\u0631 \u0627\u0644\u0634\u0631\u064A\u0643\u0629 \u0646\u0642\u0627\u0637\u0627\u064B \u0645\u0636\u0627\u0639\u0641\u0629 \u062E\u0644\u0627\u0644 \u0641\u062A\u0631\u0627\u062A \u0627\u0644\u0639\u0631\u0648\u0636 \u0627\u0644\u062E\u0627\u0635\u0629.",
+        question: "\u0643\u064A\u0641 \u0623\u062D\u0635\u0644 \u0639\u0644\u0649 \u0646\u0642\u0627\u0637 \u0627\u0644\u0648\u0644\u0627\u0621 \u0641\u064A \u062D\u0633\u0627\u0628\u064A\u061F",
+        answer: "\u062A\u064F\u0643\u062A\u0633\u0628 \u0646\u0642\u0627\u0637 \u0627\u0644\u0648\u0644\u0627\u0621 \u062D\u0635\u0631\u064A\u0627\u064B \u0639\u0646\u062F \u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0627\u0644\u0646\u0642\u062F\u064A\u0629 \u0645\u0646 \u0645\u062A\u062C\u0631 Sugar Business \u0627\u0644\u0631\u0633\u0645\u064A \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0642\u0639\u060C \u062D\u064A\u062B \u062A\u064F\u0636\u0627\u0641 \u0627\u0644\u0646\u0642\u0627\u0637 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0625\u0644\u0649 \u0631\u0635\u064A\u062F\u0643 \u0641\u0648\u0631 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0637\u0644\u0628\u060C \u0648\u064A\u0645\u0643\u0646\u0643 \u0627\u0633\u062A\u0628\u062F\u0627\u0644\u0647\u0627 \u0644\u0627\u062D\u0642\u0627\u064B \u0628\u0645\u0646\u062A\u062C\u0627\u062A \u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A.",
         order: 2,
         isVisible: true
       },
@@ -286,10 +317,21 @@ var SugarDatabase = class {
       {
         id: "set_01",
         key: "points_per_purchase",
+        value: "0",
+        category: "points",
+        type: "number",
+        description: "\u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0643\u062A\u0633\u0628\u0629 \u0645\u0646 \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u062A\u062C\u0627\u0631 (\u0645\u0644\u063A\u0627\u0629 - \u0627\u0644\u0646\u0642\u0627\u0637 \u062A\u064F\u0643\u0633\u0628 \u0645\u0646 \u0645\u062A\u062C\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0641\u0642\u0637)",
+        isSensitive: false,
+        updatedAt: now,
+        updatedBy: "usr_super_admin_01"
+      },
+      {
+        id: "set_store_pts",
+        key: "store_points_per_100_egp",
         value: "10",
         category: "points",
         type: "number",
-        description: "\u0639\u062F\u062F \u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0643\u062A\u0633\u0628\u0629 \u0644\u0643\u0644 \u0639\u0645\u0644\u064A\u0629 \u0634\u0631\u0627\u0621 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0639\u0646\u062F \u0645\u0633\u062D \u0627\u0644\u0643\u0627\u0631\u062A",
+        description: "\u0639\u062F\u062F \u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0643\u062A\u0633\u0628\u0629 \u0644\u0643\u0644 100 \u062C.\u0645 \u0639\u0646\u062F \u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0645\u0646 \u0645\u062A\u062C\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0631\u0633\u0645\u064A",
         isSensitive: false,
         updatedAt: now,
         updatedBy: "usr_super_admin_01"
@@ -450,6 +492,7 @@ var SugarDatabase = class {
     return {
       users: [superAdminUser],
       refreshTokens: [],
+      biometricCredentials: [],
       customers: [],
       cards: [],
       cardHistory: [],
@@ -460,7 +503,6 @@ var SugarDatabase = class {
       transactions: [],
       sectors,
       services,
-      serviceRequests: [],
       offers: [],
       productCategories,
       products,
@@ -522,8 +564,10 @@ var SugarDatabase = class {
       return { locked: false };
     }
     user.failedLoginAttempts += 1;
-    if (user.failedLoginAttempts >= 5) {
-      const lockUntil = new Date(now.getTime() + 5 * 60 * 1e3).toISOString();
+    if (user.failedLoginAttempts > 5) {
+      const escalationStep = user.failedLoginAttempts - 6;
+      const lockDurationMinutes = Math.min(Math.pow(5, escalationStep), 525600);
+      const lockUntil = new Date(now.getTime() + lockDurationMinutes * 60 * 1e3).toISOString();
       user.lockoutUntil = lockUntil;
       this.recordAuditLog({
         actorId: user.id,
@@ -532,13 +576,81 @@ var SugarDatabase = class {
         entity: "USER",
         entityId: user.id,
         ip,
-        reason: "\u062A\u0645 \u0642\u0641\u0644 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0644\u0645\u062F\u0629 5 \u062F\u0642\u0627\u0626\u0642 \u0644\u062A\u062C\u0627\u0648\u0632 5 \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u062F\u062E\u0648\u0644 \u062E\u0627\u0637\u0626\u0629 \u0645\u062A\u062A\u0627\u0644\u064A\u0629"
+        reason: `\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u0644\u0645\u062F\u0629 ${lockDurationMinutes} \u062F\u0642\u064A\u0642\u0629 \u0628\u0639\u062F ${user.failedLoginAttempts} \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0641\u0627\u0634\u0644\u0629 \u0645\u062A\u062A\u0627\u0644\u064A\u0629`
       });
       this.persist();
-      return { locked: true, lockUntil };
+      return {
+        locked: true,
+        lockUntil,
+        lockDurationMinutes,
+        failedAttempts: user.failedLoginAttempts
+      };
     }
     this.persist();
-    return { locked: false };
+    return { locked: false, failedAttempts: user.failedLoginAttempts };
+  }
+  // ----------------------------------------------------
+  // BIOMETRIC / WEBAUTHN CREDENTIALS
+  // ----------------------------------------------------
+  getBiometricCredentialsByUserId(userId) {
+    if (!Array.isArray(this.data.biometricCredentials)) {
+      this.data.biometricCredentials = [];
+    }
+    return this.data.biometricCredentials.filter((c) => c.userId === userId);
+  }
+  findBiometricCredentialByCredentialId(credentialId) {
+    if (!Array.isArray(this.data.biometricCredentials)) {
+      this.data.biometricCredentials = [];
+    }
+    return this.data.biometricCredentials.find((c) => c.credentialId === credentialId);
+  }
+  findBiometricCredentialsByPhone(phone) {
+    const user = this.findUserByPhone(phone);
+    if (!user) return [];
+    return this.getBiometricCredentialsByUserId(user.id);
+  }
+  addBiometricCredential(input) {
+    if (!Array.isArray(this.data.biometricCredentials)) {
+      this.data.biometricCredentials = [];
+    }
+    this.data.biometricCredentials = this.data.biometricCredentials.filter(
+      (c) => c.credentialId !== input.credentialId
+    );
+    const record = {
+      id: `bio_${crypto.randomUUID().slice(0, 8)}`,
+      userId: input.userId,
+      credentialId: input.credentialId,
+      publicKey: input.publicKey,
+      algorithm: input.algorithm ?? -7,
+      counter: input.counter ?? 0,
+      deviceName: input.deviceName || "\u062C\u0647\u0627\u0632 \u0634\u062E\u0635\u064A",
+      transports: input.transports || ["internal"],
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+      lastUsedAt: null
+    };
+    this.data.biometricCredentials.push(record);
+    this.persist();
+    return record;
+  }
+  updateBiometricCredentialUsage(id, counter) {
+    if (!Array.isArray(this.data.biometricCredentials)) return;
+    const cred = this.data.biometricCredentials.find((c) => c.id === id);
+    if (!cred) return;
+    if (typeof counter === "number" && counter > cred.counter) {
+      cred.counter = counter;
+    }
+    cred.lastUsedAt = (/* @__PURE__ */ new Date()).toISOString();
+    this.persist();
+  }
+  deleteBiometricCredential(id, userId) {
+    if (!Array.isArray(this.data.biometricCredentials)) return false;
+    const before = this.data.biometricCredentials.length;
+    this.data.biometricCredentials = this.data.biometricCredentials.filter(
+      (c) => !(c.id === id && c.userId === userId)
+    );
+    const removed = this.data.biometricCredentials.length < before;
+    if (removed) this.persist();
+    return removed;
   }
   // ----------------------------------------------------
   // CUSTOMER METHODS
@@ -889,8 +1001,7 @@ var SugarDatabase = class {
       this.persist();
       throw new Error("\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0643\u0627\u0631\u062A. \u064A\u0631\u062C\u0649 \u0645\u0646 \u0627\u0644\u0639\u0645\u064A\u0644 \u0637\u0644\u0628 \u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0643\u0627\u0631\u062A.");
     }
-    const defaultPoints = parseInt(this.getSettingValue("points_per_purchase", "10"), 10);
-    const pointsAwarded = defaultPoints;
+    const pointsAwarded = 0;
     const txNumber = `TX-PURCHASE-${Date.now()}-${crypto.randomBytes(2).toString("hex").toUpperCase()}`;
     const transaction = {
       id: `trx_${crypto.randomUUID().slice(0, 8)}`,
@@ -907,28 +1018,6 @@ var SugarDatabase = class {
     };
     this.data.transactions.push(transaction);
     card.lastScanAt = (/* @__PURE__ */ new Date()).toISOString();
-    const expiryMonths = parseInt(this.getSettingValue("points_expiry_months", "6"), 10);
-    const expiresAt = new Date(Date.now() + expiryMonths * 30 * 24 * 60 * 60 * 1e3).toISOString();
-    this.addPointLedgerEntry({
-      customerId: card.customerId,
-      type: "EARN",
-      points: pointsAwarded,
-      actorId: data.employeeId || business.userId,
-      reason: `\u0639\u0645\u0644\u064A\u0629 \u0634\u0631\u0627\u0621 \u0645\u0624\u0643\u062F\u0629 \u0644\u062F\u0649 ${business.businessName}`,
-      referenceId: transaction.id,
-      expiresAt
-    });
-    const customer = this.findCustomerById(card.customerId);
-    if (customer) {
-      this.createNotification({
-        userId: customer.userId,
-        title: "\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0646\u0642\u0627\u0637 \u062C\u062F\u064A\u062F\u0629 \u0644\u062D\u0633\u0627\u0628\u0643!",
-        message: `\u062D\u0635\u0644\u062A \u0639\u0644\u0649 ${pointsAwarded} \u0646\u0642\u0637\u0629 \u0645\u0646 ${business.businessName}. \u0631\u0635\u064A\u062F\u0643 \u0627\u0644\u062C\u062F\u064A\u062F \u0641\u064A \u0623\u0645\u0627\u0646.`,
-        type: "POINTS_EARNED",
-        priority: "MEDIUM",
-        deepLink: "/points"
-      });
-    }
     this.persist();
     return { transaction, pointsAwarded };
   }
@@ -1002,27 +1091,6 @@ var SugarDatabase = class {
   }
   findServiceById(id) {
     return this.data.services.find((s) => s.id === id);
-  }
-  createServiceRequest(data) {
-    const seq = this.data.serviceRequests.length + 1;
-    const requestNumber = `REQ-${(/* @__PURE__ */ new Date()).getFullYear()}-${seq.toString().padStart(4, "0")}`;
-    const req = {
-      id: `sr_${crypto.randomUUID().slice(0, 8)}`,
-      requestNumber,
-      customerId: data.customerId,
-      serviceId: data.serviceId,
-      status: "NEW",
-      customerNotes: data.customerNotes,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    this.data.serviceRequests.push(req);
-    this.persist();
-    return req;
-  }
-  getServiceRequests(customerId) {
-    if (customerId) return this.data.serviceRequests.filter((r) => r.customerId === customerId);
-    return this.data.serviceRequests;
   }
   // ----------------------------------------------------
   // OFFERS METHODS
@@ -1103,10 +1171,19 @@ var SugarDatabase = class {
     return offer;
   }
   // ----------------------------------------------------
-  // STORE & ORDERS (Immutable snapshots, strict payment type)
+  // STORE & ORDERS (Immutable snapshots, strict payment type, store-only points)
   // ----------------------------------------------------
   getProductCategories() {
     return this.data.productCategories;
+  }
+  calculateProductRewardPoints(product) {
+    if (product.paymentType !== "CASH") return 0;
+    if (typeof product.rewardPoints === "number" && product.rewardPoints > 0) {
+      return Math.round(product.rewardPoints);
+    }
+    const ratePer100 = parseInt(this.getSettingValue("store_points_per_100_egp", "10"), 10);
+    if (!Number.isFinite(ratePer100) || ratePer100 <= 0) return 0;
+    return Math.max(1, Math.round(product.cashPrice * ratePer100 / 100));
   }
   getProducts(filter) {
     return this.data.products.filter((p) => {
@@ -1114,10 +1191,24 @@ var SugarDatabase = class {
       if (filter?.categoryId && p.categoryId !== filter.categoryId) return false;
       if (filter?.status && p.status !== filter.status) return false;
       return p.status === "ACTIVE";
-    });
+    }).map((p) => ({
+      ...p,
+      rewardPoints: this.calculateProductRewardPoints(p)
+    }));
+  }
+  getAllProducts() {
+    return this.data.products.map((p) => ({
+      ...p,
+      rewardPoints: this.calculateProductRewardPoints(p)
+    }));
   }
   findProductById(id) {
-    return this.data.products.find((p) => p.id === id);
+    const p = this.data.products.find((item) => item.id === id);
+    if (!p) return void 0;
+    return {
+      ...p,
+      rewardPoints: this.calculateProductRewardPoints(p)
+    };
   }
   createProduct(data) {
     const product = {
@@ -1128,14 +1219,21 @@ var SugarDatabase = class {
     };
     this.data.products.push(product);
     this.persist();
-    return product;
+    return { ...product, rewardPoints: this.calculateProductRewardPoints(product) };
   }
   updateProduct(id, updates) {
-    const prd = this.findProductById(id);
+    const prd = this.data.products.find((p) => p.id === id);
     if (!prd) return void 0;
     Object.assign(prd, updates, { updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
     this.persist();
-    return prd;
+    return { ...prd, rewardPoints: this.calculateProductRewardPoints(prd) };
+  }
+  deleteProduct(id) {
+    const idx = this.data.products.findIndex((p) => p.id === id);
+    if (idx === -1) return false;
+    this.data.products.splice(idx, 1);
+    this.persist();
+    return true;
   }
   createOrder(data) {
     const customer = this.findCustomerById(data.customerId);
@@ -1146,8 +1244,9 @@ var SugarDatabase = class {
     const snapshots = [];
     let subtotalCash = 0;
     let subtotalPoints = 0;
+    let totalPointsEarned = 0;
     for (const item of data.items) {
-      const product = this.findProductById(item.productId);
+      const product = this.data.products.find((p) => p.id === item.productId);
       if (!product || product.status !== "ACTIVE") {
         throw new Error(`\u0627\u0644\u0645\u0646\u062A\u062C ${item.productId} \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B`);
       }
@@ -1169,6 +1268,9 @@ var SugarDatabase = class {
       });
       subtotalCash += product.cashPrice * item.quantity;
       subtotalPoints += product.pointsPrice * item.quantity;
+      if (data.paymentType === "CASH") {
+        totalPointsEarned += this.calculateProductRewardPoints(product) * item.quantity;
+      }
     }
     const gov = this.data.governorates.find((g) => g.nameAr === data.deliveryAddress.governorate);
     const deliveryFee = gov?.available ? gov.deliveryFee : 50;
@@ -1182,7 +1284,7 @@ var SugarDatabase = class {
         type: "SPEND",
         points: -subtotalPoints,
         actorId: customer.userId,
-        reason: "\u0637\u0644\u0628 \u0645\u0646\u062A\u062C\u0627\u062A \u0645\u0646 \u0645\u062A\u062C\u0631 Sugar Business"
+        reason: "\u0627\u0633\u062A\u0628\u062F\u0627\u0644 \u0646\u0642\u0627\u0637 \u0628\u0645\u0646\u062A\u062C\u0627\u062A \u0645\u0646 \u0645\u062A\u062C\u0631 Sugar Business"
       });
     }
     const seq = this.data.orders.length + 1;
@@ -1198,14 +1300,14 @@ var SugarDatabase = class {
       subtotalPoints,
       deliveryFee,
       totalCash: data.paymentType === "CASH" ? subtotalCash + deliveryFee : deliveryFee,
-      // cash delivery for points order
       totalPoints: subtotalPoints,
+      pointsEarned: data.paymentType === "CASH" ? totalPointsEarned : 0,
       deliveryAddress: data.deliveryAddress,
       statusTimeline: [
         {
           status: "PENDING",
           timestamp: now,
-          note: data.paymentType === "POINTS" ? "\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0627\u0644\u0637\u0644\u0628 \u0648\u062D\u062C\u0632 \u0627\u0644\u0646\u0642\u0627\u0637 \u0628\u0646\u062C\u0627\u062D" : "\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621 \u0648\u0627\u0644\u062F\u0641\u0639 \u0639\u0646\u062F \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 (COD)"
+          note: data.paymentType === "POINTS" ? "\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0627\u0644\u0637\u0644\u0628 \u0648\u062E\u0635\u0645 \u0627\u0644\u0646\u0642\u0627\u0637 \u0628\u0646\u062C\u0627\u062D" : `\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621 \u0648\u0627\u0644\u062F\u0641\u0639 \u0639\u0646\u062F \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 (COD)${totalPointsEarned > 0 ? ` \u0645\u0639 \u0625\u0636\u0627\u0641\u0629 ${totalPointsEarned} \u0646\u0642\u0637\u0629 \u0645\u0643\u0627\u0641\u0623\u0629` : ""}`
         }
       ],
       items: snapshots,
@@ -1213,6 +1315,27 @@ var SugarDatabase = class {
       updatedAt: now
     };
     this.data.orders.push(order);
+    if (data.paymentType === "CASH" && totalPointsEarned > 0) {
+      const expiryMonths = parseInt(this.getSettingValue("points_expiry_months", "6"), 10);
+      const expiresAt = new Date(Date.now() + expiryMonths * 30 * 24 * 60 * 60 * 1e3).toISOString();
+      this.addPointLedgerEntry({
+        customerId: customer.id,
+        type: "EARN",
+        points: totalPointsEarned,
+        actorId: "STORE_SYSTEM",
+        reason: `\u0645\u0643\u0627\u0641\u0623\u0629 \u0634\u0631\u0627\u0621 \u0645\u0646\u062A\u062C\u0627\u062A \u0645\u0646 \u0645\u062A\u062C\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 (\u0637\u0644\u0628 \u0631\u0642\u0645 ${orderNumber})`,
+        referenceId: order.id,
+        expiresAt
+      });
+      this.createNotification({
+        userId: customer.userId,
+        title: "\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0646\u0642\u0627\u0637 \u0645\u0643\u0627\u0641\u0623\u0629 \u0627\u0644\u0645\u062A\u062C\u0631!",
+        message: `\u062D\u0635\u0644\u062A \u0639\u0644\u0649 ${totalPointsEarned} \u0646\u0642\u0637\u0629 \u0645\u0642\u0627\u0628\u0644 \u0634\u0631\u0627\u0626\u0643 \u0645\u0646 \u0645\u062A\u062C\u0631 Sugar Business (\u0627\u0644\u0637\u0644\u0628 ${orderNumber}).`,
+        type: "POINTS_EARNED",
+        priority: "MEDIUM",
+        deepLink: "/points"
+      });
+    }
     this.createNotification({
       userId: customer.userId,
       title: "\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0637\u0644\u0628\u0643 \u0628\u0646\u062C\u0627\u062D",
@@ -1225,8 +1348,19 @@ var SugarDatabase = class {
     return order;
   }
   getOrders(customerId) {
-    if (customerId) return this.data.orders.filter((o) => o.customerId === customerId);
-    return this.data.orders;
+    const list = customerId ? this.data.orders.filter((o) => o.customerId === customerId) : this.data.orders;
+    return [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  getAllOrdersWithCustomer() {
+    return this.getOrders().map((o) => {
+      const customer = this.findCustomerById(o.customerId);
+      const user = customer ? this.findUserById(customer.userId) : void 0;
+      return {
+        ...o,
+        customerName: customer?.fullName || o.deliveryAddress?.recipient || "\u0639\u0645\u064A\u0644",
+        customerPhone: user?.phone || o.deliveryAddress?.phone || ""
+      };
+    });
   }
   findOrderById(id) {
     return this.data.orders.find((o) => o.id === id);
@@ -1234,21 +1368,45 @@ var SugarDatabase = class {
   updateOrderStatus(orderId, newStatus, note) {
     const order = this.findOrderById(orderId);
     if (!order) throw new Error("\u0627\u0644\u0637\u0644\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");
+    const previousStatus = order.status;
     order.status = newStatus;
+    if (newStatus === "CANCELLED" && note) {
+      order.cancellationReason = note;
+    }
     order.statusTimeline.push({
       status: newStatus,
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       note
     });
     order.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-    if (newStatus === "CANCELLED" && order.paymentType === "POINTS") {
-      this.addPointLedgerEntry({
-        customerId: order.customerId,
-        type: "RELEASE",
-        points: order.totalPoints,
-        actorId: "SYSTEM",
-        reason: `\u0625\u0631\u062C\u0627\u0639 \u0646\u0642\u0627\u0637 \u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u0645\u0644\u063A\u064A \u0631\u0642\u0645 ${order.orderNumber}`
-      });
+    if (newStatus === "CANCELLED" && previousStatus !== "CANCELLED") {
+      for (const item of order.items) {
+        const prd = this.data.products.find((p) => p.id === item.productId);
+        if (prd) {
+          prd.inventory += item.quantity;
+          if (prd.status === "OUT_OF_STOCK" && prd.inventory > 0) {
+            prd.status = "ACTIVE";
+          }
+        }
+      }
+      if (order.paymentType === "POINTS" && order.totalPoints > 0) {
+        this.addPointLedgerEntry({
+          customerId: order.customerId,
+          type: "REVERSE",
+          points: order.totalPoints,
+          actorId: "SYSTEM",
+          reason: `\u0625\u0631\u062C\u0627\u0639 \u0646\u0642\u0627\u0637 \u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u0645\u0644\u063A\u064A \u0631\u0642\u0645 ${order.orderNumber}`
+        });
+      }
+      if (order.paymentType === "CASH" && (order.pointsEarned || 0) > 0) {
+        this.addPointLedgerEntry({
+          customerId: order.customerId,
+          type: "REVERSE",
+          points: -(order.pointsEarned || 0),
+          actorId: "SYSTEM",
+          reason: `\u0627\u0633\u062A\u0631\u062F\u0627\u062F \u0627\u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0643\u062A\u0633\u0628\u0629 \u0628\u0639\u062F \u0625\u0644\u063A\u0627\u0621 \u0637\u0644\u0628 \u0627\u0644\u0645\u062A\u062C\u0631 \u0631\u0642\u0645 ${order.orderNumber}`
+        });
+      }
     }
     this.persist();
     return order;
@@ -1728,6 +1886,34 @@ function verifyRefreshToken(token) {
     return null;
   }
 }
+function createSignedChallengeToken(payload, ttlSeconds = 300) {
+  const fullPayload = {
+    ...payload,
+    exp: Math.floor(Date.now() / 1e3) + ttlSeconds
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(fullPayload)).toString("base64url");
+  const signature = crypto2.createHmac("sha256", ACCESS_SECRET).update(`webauthn.${payloadB64}`).digest("base64url");
+  return `${payloadB64}.${signature}`;
+}
+function verifySignedChallengeToken(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 2) return null;
+    const [payloadB64, signature] = parts;
+    const expectedSig = crypto2.createHmac("sha256", ACCESS_SECRET).update(`webauthn.${payloadB64}`).digest("base64url");
+    if (signature.length !== expectedSig.length) return null;
+    if (!crypto2.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+      return null;
+    }
+    const parsed = JSON.parse(
+      Buffer.from(payloadB64, "base64url").toString("utf-8")
+    );
+    if (!parsed.exp || Date.now() / 1e3 > parsed.exp) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -1737,7 +1923,7 @@ function authenticate(req, res, next) {
   const payload = verifyAccessToken(token);
   if (payload) {
     const user = db.findUserById(payload.userId);
-    if (user && user.status === "ACTIVE") {
+    if (user && (user.status === "ACTIVE" || user.status === "APPROVED")) {
       req.user = {
         id: user.id,
         phone: user.phone,
@@ -1929,13 +2115,27 @@ apiRouter.post("/auth/login", (req, res) => {
     });
     return;
   }
+  const formatArabicDuration = (minutes) => {
+    if (minutes === 1) return "\u062F\u0642\u064A\u0642\u0629 \u0648\u0627\u062D\u062F\u0629";
+    if (minutes === 2) return "\u062F\u0642\u064A\u0642\u062A\u064A\u0646";
+    if (minutes >= 3 && minutes <= 10) return `${minutes} \u062F\u0642\u0627\u0626\u0642`;
+    return `${minutes} \u062F\u0642\u064A\u0642\u0629`;
+  };
   if (user.lockoutUntil && new Date(user.lockoutUntil).getTime() > Date.now()) {
-    const remainingMinutes = Math.ceil((new Date(user.lockoutUntil).getTime() - Date.now()) / (60 * 1e3));
+    const remainingMs = new Date(user.lockoutUntil).getTime() - Date.now();
+    const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1e3));
+    const remainingMinutes = Math.ceil(remainingSeconds / 60);
+    const waitText = remainingSeconds < 60 ? `${remainingSeconds} \u062B\u0627\u0646\u064A\u0629` : formatArabicDuration(remainingMinutes);
     res.status(423).json({
       success: false,
       error: {
         code: "ACCOUNT_LOCKED",
-        message: `\u062A\u0645 \u0642\u0641\u0644 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0644\u062A\u062C\u0627\u0648\u0632 \u0639\u062F\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0627\u0644\u062E\u0627\u0637\u0626\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${remainingMinutes} \u062F\u0642\u064A\u0642\u0629.`
+        message: `\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0624\u0642\u062A\u0627\u064B \u0644\u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u0645\u0648\u062D\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 ${waitText}.`,
+        details: {
+          lockUntil: user.lockoutUntil,
+          remainingSeconds,
+          failedAttempts: user.failedLoginAttempts
+        }
       }
     });
     return;
@@ -1944,12 +2144,20 @@ apiRouter.post("/auth/login", (req, res) => {
   if (!isValid) {
     const attempt = db.recordLoginAttempt(phone, false, ip);
     const remainingAttempts = Math.max(0, 5 - user.failedLoginAttempts);
-    if (attempt.locked) {
+    if (attempt.locked && attempt.lockUntil) {
+      const lockMinutes = attempt.lockDurationMinutes || 1;
+      const durationText = formatArabicDuration(lockMinutes);
       res.status(423).json({
         success: false,
         error: {
           code: "ACCOUNT_LOCKED",
-          message: "\u062A\u0645 \u0642\u0641\u0644 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B \u0644\u0645\u062F\u0629 5 \u062F\u0642\u0627\u0626\u0642 \u0628\u0639\u062F 5 \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u062F\u062E\u0648\u0644 \u0641\u0627\u0634\u0644\u0629 \u0645\u062A\u062A\u0627\u0644\u064A\u0629."
+          message: `\u062A\u0645 \u0625\u062F\u062E\u0627\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0628\u0634\u0643\u0644 \u062E\u0627\u0637\u0626 \u0623\u0643\u062B\u0631 \u0645\u0646 5 \u0645\u0631\u0627\u062A (${user.failedLoginAttempts} \u0645\u062D\u0627\u0648\u0644\u0627\u062A). \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 ${durationText} \u0642\u0628\u0644 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649 (\u064A\u062A\u0636\u0627\u0639\u0641 \u0648\u0642\u062A \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 5 \u0623\u0636\u0639\u0627\u0641 \u0645\u0639 \u0643\u0644 \u062E\u0637\u0623 \u0625\u0636\u0627\u0641\u064A).`,
+          details: {
+            lockUntil: attempt.lockUntil,
+            remainingSeconds: lockMinutes * 60,
+            lockDurationMinutes: lockMinutes,
+            failedAttempts: user.failedLoginAttempts
+          }
         }
       });
       return;
@@ -1958,7 +2166,11 @@ apiRouter.post("/auth/login", (req, res) => {
       success: false,
       error: {
         code: "INVALID_CREDENTIALS",
-        message: `\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629. \u0645\u062A\u0628\u0642\u064A ${remainingAttempts} \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0642\u0628\u0644 \u0642\u0641\u0644 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0624\u0642\u062A\u0627\u064B.`
+        message: remainingAttempts === 0 ? "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629. \u062A\u0645 \u0627\u0633\u062A\u0646\u0641\u0627\u062F \u0627\u0644\u0640 5 \u0645\u062D\u0627\u0648\u0644\u0627\u062A\u061B \u0627\u0644\u062E\u0637\u0623 \u0627\u0644\u0642\u0627\u062F\u0645 \u0633\u064A\u0641\u0631\u0636 \u0641\u062A\u0631\u0629 \u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u0628\u062F\u0623 \u0628\u062F\u0642\u064A\u0642\u0629 \u0648\u062A\u0636\u0627\u0639\u0641 5 \u0623\u0636\u0639\u0627\u0641 \u0643\u0644 \u0645\u0631\u0629." : `\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629. \u0645\u062A\u0628\u0642\u064A ${remainingAttempts} \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0642\u0628\u0644 \u0641\u0631\u0636 \u0641\u062A\u0631\u0629 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631.`,
+        details: {
+          remainingAttempts,
+          failedAttempts: user.failedLoginAttempts
+        }
       }
     });
     return;
@@ -2039,6 +2251,333 @@ apiRouter.get("/auth/me", requireAuth, (req, res) => {
       employee,
       card,
       pointAccount
+    }
+  });
+});
+function decodeClientDataJSON(clientDataB64) {
+  try {
+    const raw = Buffer.from(clientDataB64, "base64url").toString("utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+function parseAuthenticatorDataFlags(authDataB64) {
+  try {
+    const buf = Buffer.from(authDataB64, "base64url");
+    if (buf.length < 37) return null;
+    const flags = buf[32];
+    const up = (flags & 1) !== 0;
+    const uv = (flags & 4) !== 0;
+    const signCount = buf.readUInt32BE(33);
+    return { up, uv, signCount };
+  } catch {
+    return null;
+  }
+}
+function verifyWebAuthnAssertionSignature(publicKeySpkiB64, authenticatorDataB64, clientDataB64, signatureB64) {
+  try {
+    if (!publicKeySpkiB64) return false;
+    const authDataBuf = Buffer.from(authenticatorDataB64, "base64url");
+    const clientDataHash = crypto3.createHash("sha256").update(Buffer.from(clientDataB64, "base64url")).digest();
+    const signedData = Buffer.concat([authDataBuf, clientDataHash]);
+    const keyObj = crypto3.createPublicKey({
+      key: Buffer.from(publicKeySpkiB64, "base64url"),
+      format: "der",
+      type: "spki"
+    });
+    const sigBuf = Buffer.from(signatureB64, "base64url");
+    return crypto3.verify("sha256", signedData, keyObj, sigBuf);
+  } catch {
+    return false;
+  }
+}
+apiRouter.get("/auth/webauthn/credentials", requireAuth, (req, res) => {
+  const credentials = db.getBiometricCredentialsByUserId(req.user.id).map((c) => ({
+    id: c.id,
+    credentialId: c.credentialId,
+    deviceName: c.deviceName,
+    createdAt: c.createdAt,
+    lastUsedAt: c.lastUsedAt
+  }));
+  res.json({ success: true, data: { credentials } });
+});
+apiRouter.post("/auth/webauthn/register-options", requireAuth, (req, res) => {
+  const user = db.findUserById(req.user.id);
+  if (!user) {
+    res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "\u0627\u0644\u062D\u0633\u0627\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" } });
+    return;
+  }
+  const customer = db.findCustomerByUserId(user.id);
+  const business = db.findBusinessByUserId(user.id);
+  const displayName = customer?.fullName || business?.businessName || user.phone;
+  const challenge = crypto3.randomBytes(32).toString("base64url");
+  const challengeToken = createSignedChallengeToken({
+    challenge,
+    type: "register",
+    userId: user.id,
+    phone: user.phone
+  });
+  const existingCreds = db.getBiometricCredentialsByUserId(user.id).map((c) => ({
+    id: c.credentialId,
+    type: "public-key",
+    transports: c.transports || ["internal"]
+  }));
+  res.json({
+    success: true,
+    data: {
+      challenge,
+      challengeToken,
+      user: {
+        id: Buffer.from(user.id, "utf-8").toString("base64url"),
+        name: user.phone,
+        displayName
+      },
+      rp: {
+        name: "Sugar Business"
+      },
+      excludeCredentials: existingCreds
+    }
+  });
+});
+apiRouter.post("/auth/webauthn/register-verify", requireAuth, (req, res) => {
+  const { challengeToken, credential, deviceName } = req.body || {};
+  if (!challengeToken || !credential?.id || !credential?.response?.clientDataJSON) {
+    res.status(400).json({
+      success: false,
+      error: { code: "INVALID_PAYLOAD", message: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u062D\u0642\u0642 \u0627\u0644\u0628\u064A\u0648\u0645\u062A\u0631\u064A \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629" }
+    });
+    return;
+  }
+  const tokenPayload = verifySignedChallengeToken(challengeToken);
+  if (!tokenPayload || tokenPayload.type !== "register" || tokenPayload.userId !== req.user.id) {
+    res.status(400).json({
+      success: false,
+      error: { code: "EXPIRED_CHALLENGE", message: "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u062C\u0644\u0633\u0629 \u0627\u0644\u062A\u062D\u0642\u0642\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u062C\u062F\u062F\u0627\u064B" }
+    });
+    return;
+  }
+  const clientData = decodeClientDataJSON(credential.response.clientDataJSON);
+  if (!clientData || clientData.type !== "webauthn.create" || clientData.challenge !== tokenPayload.challenge) {
+    res.status(400).json({
+      success: false,
+      error: { code: "CHALLENGE_MISMATCH", message: "\u0641\u0634\u0644 \u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u062A\u062D\u062F\u064A \u0627\u0644\u0623\u0645\u0646\u064A \u0644\u0644\u0628\u0635\u0645\u0629" }
+    });
+    return;
+  }
+  const saved = db.addBiometricCredential({
+    userId: req.user.id,
+    credentialId: String(credential.id),
+    publicKey: credential.response.publicKey ? String(credential.response.publicKey) : "",
+    algorithm: typeof credential.response.publicKeyAlgorithm === "number" ? credential.response.publicKeyAlgorithm : -7,
+    counter: 0,
+    deviceName: typeof deviceName === "string" && deviceName.trim() ? deviceName.trim() : "\u062C\u0647\u0627\u0632 \u0645\u0648\u062B\u0648\u0642",
+    transports: Array.isArray(credential.response.transports) ? credential.response.transports : ["internal"]
+  });
+  db.recordAuditLog({
+    actorId: req.user.id,
+    actorRole: req.user.role,
+    action: "BIOMETRIC_CREDENTIAL_REGISTERED",
+    entity: "USER",
+    entityId: req.user.id,
+    ip: req.ip || req.socket.remoteAddress,
+    reason: `\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0627\u0644\u0628\u0635\u0645\u0629/\u0627\u0644\u0648\u062C\u0647 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632: ${saved.deviceName}`
+  });
+  res.status(201).json({
+    success: true,
+    data: {
+      credential: {
+        id: saved.id,
+        credentialId: saved.credentialId,
+        deviceName: saved.deviceName,
+        createdAt: saved.createdAt
+      },
+      message: "\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0627\u0644\u0628\u0635\u0645\u0629 / \u0627\u0644\u0648\u062C\u0647 \u0628\u0646\u062C\u0627\u062D \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632"
+    }
+  });
+});
+apiRouter.delete("/auth/webauthn/credentials/:id", requireAuth, (req, res) => {
+  const removed = db.deleteBiometricCredential(req.params.id, req.user.id);
+  if (!removed) {
+    res.status(404).json({
+      success: false,
+      error: { code: "NOT_FOUND", message: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0628\u0635\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629" }
+    });
+    return;
+  }
+  db.recordAuditLog({
+    actorId: req.user.id,
+    actorRole: req.user.role,
+    action: "BIOMETRIC_CREDENTIAL_REMOVED",
+    entity: "USER",
+    entityId: req.user.id,
+    reason: "\u0625\u0632\u0627\u0644\u0629 \u062C\u0647\u0627\u0632 \u0645\u0648\u062B\u0648\u0642 \u0644\u0644\u062F\u062E\u0648\u0644 \u0627\u0644\u0628\u064A\u0648\u0645\u062A\u0631\u064A"
+  });
+  res.json({ success: true, data: { message: "\u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u0631\u0628\u0637 \u0627\u0644\u0628\u0635\u0645\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632 \u0628\u0646\u062C\u0627\u062D" } });
+});
+apiRouter.post("/auth/webauthn/login-options", (req, res) => {
+  const { phone, credentialId } = req.body || {};
+  const cleanPhone = typeof phone === "string" ? phone.trim() : "";
+  let allowCredentials = [];
+  if (cleanPhone) {
+    const userCreds = db.findBiometricCredentialsByPhone(cleanPhone);
+    if (userCreds.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: "NO_BIOMETRIC_REGISTERED",
+          message: "\u0644\u0645 \u064A\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0628\u0635\u0645\u0629 \u0623\u0648 \u0627\u0644\u0648\u062C\u0647 \u0644\u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628 \u0628\u0639\u062F. \u064A\u0631\u062C\u0649 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u062B\u0645 \u062A\u0641\u0639\u064A\u0644\u0647\u0627 \u0645\u0646 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645."
+        }
+      });
+      return;
+    }
+    allowCredentials = userCreds.map((c) => ({
+      id: c.credentialId,
+      type: "public-key",
+      transports: c.transports || ["internal"]
+    }));
+  } else if (typeof credentialId === "string" && credentialId.trim()) {
+    const cred = db.findBiometricCredentialByCredentialId(credentialId.trim());
+    if (cred) {
+      allowCredentials = [
+        {
+          id: cred.credentialId,
+          type: "public-key",
+          transports: cred.transports || ["internal"]
+        }
+      ];
+    }
+  }
+  const challenge = crypto3.randomBytes(32).toString("base64url");
+  const challengeToken = createSignedChallengeToken({
+    challenge,
+    type: "login",
+    phone: cleanPhone || void 0
+  });
+  res.json({
+    success: true,
+    data: {
+      challenge,
+      challengeToken,
+      allowCredentials
+    }
+  });
+});
+apiRouter.post("/auth/webauthn/login-verify", (req, res) => {
+  const { challengeToken, credential } = req.body || {};
+  const ip = req.ip || req.socket.remoteAddress;
+  if (!challengeToken || !credential?.id || !credential?.response?.clientDataJSON || !credential?.response?.authenticatorData || !credential?.response?.signature) {
+    res.status(400).json({
+      success: false,
+      error: { code: "INVALID_PAYLOAD", message: "\u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0627\u0644\u062A\u062D\u0642\u0642 \u0627\u0644\u0628\u064A\u0648\u0645\u062A\u0631\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629" }
+    });
+    return;
+  }
+  const tokenPayload = verifySignedChallengeToken(challengeToken);
+  if (!tokenPayload || tokenPayload.type !== "login") {
+    res.status(400).json({
+      success: false,
+      error: { code: "EXPIRED_CHALLENGE", message: "\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u062C\u0644\u0633\u0629 \u0627\u0644\u062A\u062D\u0642\u0642 \u0627\u0644\u0628\u064A\u0648\u0645\u062A\u0631\u064A\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649" }
+    });
+    return;
+  }
+  const clientData = decodeClientDataJSON(credential.response.clientDataJSON);
+  if (!clientData || clientData.type !== "webauthn.get" || clientData.challenge !== tokenPayload.challenge) {
+    res.status(401).json({
+      success: false,
+      error: { code: "CHALLENGE_MISMATCH", message: "\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062A\u062D\u062F\u064A \u0627\u0644\u0623\u0645\u0646\u064A \u0644\u0644\u0628\u0635\u0645\u0629" }
+    });
+    return;
+  }
+  const authFlags = parseAuthenticatorDataFlags(credential.response.authenticatorData);
+  if (!authFlags || !authFlags.up) {
+    res.status(401).json({
+      success: false,
+      error: { code: "USER_NOT_PRESENT", message: "\u0644\u0645 \u064A\u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0647\u0648\u064A\u0629 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632" }
+    });
+    return;
+  }
+  const storedCred = db.findBiometricCredentialByCredentialId(String(credential.id));
+  if (!storedCred) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: "CREDENTIAL_NOT_FOUND",
+        message: "\u0647\u0630\u0647 \u0627\u0644\u0628\u0635\u0645\u0629 \u063A\u064A\u0631 \u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0623\u064A \u062D\u0633\u0627\u0628 \u0646\u0634\u0637 \u0639\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645. \u064A\u0631\u062C\u0649 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0648\u0625\u0639\u0627\u062F\u0629 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0628\u0635\u0645\u0629."
+      }
+    });
+    return;
+  }
+  const user = db.findUserById(storedCred.userId);
+  if (!user) {
+    res.status(401).json({
+      success: false,
+      error: { code: "USER_NOT_FOUND", message: "\u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0631\u062A\u0628\u0637 \u0628\u0647\u0630\u0647 \u0627\u0644\u0628\u0635\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" }
+    });
+    return;
+  }
+  if (tokenPayload.phone && user.phone !== tokenPayload.phone) {
+    res.status(401).json({
+      success: false,
+      error: { code: "PHONE_MISMATCH", message: "\u0627\u0644\u0628\u0635\u0645\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0629 \u0644\u0627 \u062A\u062E\u0635 \u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u0627\u0644\u0645\u062F\u062E\u0644" }
+    });
+    return;
+  }
+  if (user.lockoutUntil && new Date(user.lockoutUntil).getTime() > Date.now()) {
+    const remainingSeconds = Math.max(1, Math.ceil((new Date(user.lockoutUntil).getTime() - Date.now()) / 1e3));
+    const remainingMinutes = Math.ceil(remainingSeconds / 60);
+    const waitText = remainingSeconds < 60 ? `${remainingSeconds} \u062B\u0627\u0646\u064A\u0629` : remainingMinutes === 1 ? "\u062F\u0642\u064A\u0642\u0629 \u0648\u0627\u062D\u062F\u0629" : `${remainingMinutes} \u062F\u0642\u064A\u0642\u0629`;
+    res.status(423).json({
+      success: false,
+      error: {
+        code: "ACCOUNT_LOCKED",
+        message: `\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0645\u062D\u0627\u0648\u0644\u0627\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0624\u0642\u062A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${waitText}.`,
+        details: {
+          lockUntil: user.lockoutUntil,
+          remainingSeconds,
+          failedAttempts: user.failedLoginAttempts
+        }
+      }
+    });
+    return;
+  }
+  if (storedCred.publicKey) {
+    const sigOk = verifyWebAuthnAssertionSignature(
+      storedCred.publicKey,
+      credential.response.authenticatorData,
+      credential.response.clientDataJSON,
+      credential.response.signature
+    );
+    if (!sigOk) {
+      res.status(401).json({
+        success: false,
+        error: { code: "INVALID_SIGNATURE", message: "\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0642\u0642 \u0627\u0644\u062A\u0634\u0641\u064A\u0631\u064A \u0645\u0646 \u0627\u0644\u0628\u0635\u0645\u0629" }
+      });
+      return;
+    }
+  }
+  db.updateBiometricCredentialUsage(storedCred.id, authFlags.signCount);
+  db.recordLoginAttempt(user.phone, true, ip);
+  const customer = db.findCustomerByUserId(user.id);
+  const business = db.findBusinessByUserId(user.id);
+  const employee = db.findEmployeeByUserId(user.id);
+  const accessToken = generateAccessToken(user);
+  const { token: refreshToken } = generateRefreshToken(user);
+  res.json({
+    success: true,
+    data: {
+      user: {
+        id: user.id,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      },
+      customer,
+      business,
+      employee,
+      accessToken,
+      refreshToken
     }
   });
 });
@@ -2213,8 +2752,8 @@ apiRouter.post("/transactions/purchase", requireAuth, (req, res) => {
       success: true,
       data: {
         transactionId: result.transaction.transactionId,
-        pointsAwarded: result.pointsAwarded,
-        message: `\u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0639\u0645\u0644\u064A\u0629 \u0648\u0625\u0636\u0627\u0641\u0629 ${result.pointsAwarded} \u0646\u0642\u0637\u0629 \u0628\u0646\u062C\u0627\u062D \u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0639\u0645\u064A\u0644.`
+        pointsAwarded: 0,
+        message: "\u062A\u0645 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0643\u0627\u0631\u062A \u0648\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0628\u0646\u062C\u0627\u062D (\u0628\u062F\u0648\u0646 \u0625\u0636\u0627\u0641\u0629 \u0646\u0642\u0627\u0637 \u2014 \u062A\u064F\u0643\u062A\u0633\u0628 \u0627\u0644\u0646\u0642\u0627\u0637 \u0639\u0646\u062F \u0627\u0644\u0634\u0631\u0627\u0621 \u0645\u0646 \u0645\u062A\u062C\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0631\u0633\u0645\u064A \u0641\u0642\u0637)."
       }
     });
   } catch (err) {
@@ -2350,39 +2889,6 @@ apiRouter.get("/services/:id", (req, res) => {
   }
   res.json({ success: true, data: srv });
 });
-apiRouter.post("/services/requests", requireAuth, (req, res) => {
-  const customer = db.findCustomerByUserId(req.user.id);
-  if (!customer) {
-    res.status(403).json({ success: false, error: { code: "FORBIDDEN", message: "\u0637\u0644\u0628 \u0627\u0644\u062E\u062F\u0645\u0627\u062A \u0645\u062A\u0627\u062D \u0644\u0644\u0639\u0645\u0644\u0627\u0621 \u0627\u0644\u0645\u0633\u062C\u0644\u064A\u0646 \u0641\u0642\u0637" } });
-    return;
-  }
-  const { serviceId, customerNotes } = req.body;
-  if (!serviceId) {
-    res.status(400).json({ success: false, error: { code: "MISSING_SERVICE", message: "\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u062E\u062F\u0645\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629" } });
-    return;
-  }
-  const request = db.createServiceRequest({
-    customerId: customer.id,
-    serviceId,
-    customerNotes
-  });
-  res.status(201).json({
-    success: true,
-    data: {
-      request,
-      message: `\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0637\u0644\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0628\u0631\u0642\u0645 ${request.requestNumber}. \u0633\u064A\u0642\u0648\u0645 \u0641\u0631\u064A\u0642 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0628\u0645\u0631\u0627\u062C\u0639\u062A\u0647 \u0648\u0627\u0644\u062A\u0646\u0633\u064A\u0642 \u0645\u0639 \u0623\u0641\u0636\u0644 \u0634\u0631\u064A\u0643 \u0645\u0639\u062A\u0645\u062F.`
-    }
-  });
-});
-apiRouter.get("/services/requests/my-requests", requireAuth, (req, res) => {
-  const customer = db.findCustomerByUserId(req.user.id);
-  if (!customer) {
-    res.json({ success: true, data: [] });
-    return;
-  }
-  const reqs = db.getServiceRequests(customer.id);
-  res.json({ success: true, data: reqs });
-});
 apiRouter.get("/offers/active", (req, res) => {
   const offers = db.getActiveOffers();
   res.json({ success: true, data: offers });
@@ -2469,7 +2975,7 @@ apiRouter.post("/orders", requireAuth, (req, res) => {
       success: true,
       data: {
         order,
-        message: `\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0637\u0644\u0628 \u0631\u0642\u0645 ${order.orderNumber} \u0628\u0646\u062C\u0627\u062D.`
+        message: order.pointsEarned && order.pointsEarned > 0 ? `\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0637\u0644\u0628 \u0631\u0642\u0645 ${order.orderNumber} \u0628\u0646\u062C\u0627\u062D \u0648\u0625\u0636\u0627\u0641\u0629 ${order.pointsEarned} \u0646\u0642\u0637\u0629 \u0644\u0631\u0635\u064A\u062F\u0643.` : `\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0637\u0644\u0628 \u0631\u0642\u0645 ${order.orderNumber} \u0628\u0646\u062C\u0627\u062D.`
       }
     });
   } catch (err) {
@@ -2681,28 +3187,95 @@ apiRouter.delete("/admin/discount-services/:id", requirePermission(Permissions.S
   const success = db.deleteDiscountService(req.params.id);
   res.json({ success });
 });
+apiRouter.get("/admin/products", requirePermission(Permissions.STORE_MANAGE), (req, res) => {
+  res.json({ success: true, data: db.getAllProducts() });
+});
 apiRouter.post("/admin/products", requirePermission(Permissions.STORE_MANAGE), (req, res) => {
   try {
-    const { name, categoryId, description, cashPrice, pointsPrice, paymentType, images, status } = req.body;
-    if (!name || !cashPrice) {
-      res.status(400).json({ success: false, error: { code: "MISSING_FIELDS", message: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u062A\u062C \u0648\u0627\u0644\u0633\u0639\u0631 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" } });
+    const {
+      name,
+      categoryId,
+      description,
+      cashPrice,
+      pointsPrice,
+      rewardPoints,
+      discount,
+      paymentType,
+      images,
+      status,
+      inventory,
+      lowStockThreshold
+    } = req.body;
+    const type = paymentType === "POINTS" ? "POINTS" : "CASH";
+    if (!name || type === "CASH" && (cashPrice === void 0 || Number(cashPrice) < 0) || type === "POINTS" && (!pointsPrice || Number(pointsPrice) <= 0)) {
+      res.status(400).json({
+        success: false,
+        error: { code: "MISSING_FIELDS", message: "\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u062A\u062C \u0648\u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0645\u0646\u0627\u0633\u0628 (\u0646\u0642\u062F\u064A \u0623\u0648 \u0628\u0627\u0644\u0646\u0642\u0627\u0637)" }
+      });
       return;
     }
+    const cleanImages = Array.isArray(images) && images.filter(Boolean).length > 0 ? images.filter(Boolean) : ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80"];
     const product = db.createProduct({
-      name,
+      name: String(name).trim(),
       categoryId: categoryId || "cat_01",
       description: description || "",
-      cashPrice: Number(cashPrice),
+      cashPrice: Number(cashPrice || 0),
       pointsPrice: Number(pointsPrice || 0),
-      paymentType: paymentType || "CASH",
-      images: images || ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80"],
-      inventory: Number(req.body.inventory || 100),
-      lowStockThreshold: Number(req.body.lowStockThreshold || 5),
+      rewardPoints: rewardPoints !== void 0 ? Number(rewardPoints) : void 0,
+      discount: discount !== void 0 ? Number(discount) : 0,
+      paymentType: type,
+      images: cleanImages,
+      inventory: Number(inventory ?? 100),
+      lowStockThreshold: Number(lowStockThreshold ?? 5),
       status: status || "ACTIVE"
     });
     res.status(201).json({ success: true, data: product });
   } catch (err) {
     res.status(400).json({ success: false, error: { code: "ERROR", message: err.message } });
+  }
+});
+apiRouter.put("/admin/products/:id", requirePermission(Permissions.STORE_MANAGE), (req, res) => {
+  try {
+    const updated = db.updateProduct(req.params.id, req.body || {});
+    if (!updated) {
+      res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "\u0627\u0644\u0645\u0646\u062A\u062C \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" } });
+      return;
+    }
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(400).json({ success: false, error: { code: "ERROR", message: err.message } });
+  }
+});
+apiRouter.delete("/admin/products/:id", requirePermission(Permissions.STORE_MANAGE), (req, res) => {
+  const removed = db.deleteProduct(req.params.id);
+  if (!removed) {
+    res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "\u0627\u0644\u0645\u0646\u062A\u062C \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" } });
+    return;
+  }
+  res.json({ success: true, data: { message: "\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u0646\u062A\u062C \u0628\u0646\u062C\u0627\u062D" } });
+});
+apiRouter.get("/admin/orders", requirePermission(Permissions.ORDERS_READ), (req, res) => {
+  res.json({ success: true, data: db.getAllOrdersWithCustomer() });
+});
+apiRouter.put("/admin/orders/:id/status", requirePermission(Permissions.ORDERS_UPDATE), (req, res) => {
+  try {
+    const { status, note } = req.body || {};
+    if (!status) {
+      res.status(400).json({ success: false, error: { code: "MISSING_STATUS", message: "\u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u0645\u0637\u0644\u0648\u0628\u0629" } });
+      return;
+    }
+    const updated = db.updateOrderStatus(req.params.id, status, note || `\u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0644\u0628 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0625\u0644\u0649 ${status}`);
+    db.recordAuditLog({
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `ORDER_STATUS_${status}`,
+      entity: "ORDER",
+      entityId: updated.id,
+      reason: note || `\u062A\u063A\u064A\u064A\u0631 \u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0644\u0628 ${updated.orderNumber} \u0625\u0644\u0649 ${status}`
+    });
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(400).json({ success: false, error: { code: "ORDER_UPDATE_ERROR", message: err.message } });
   }
 });
 apiRouter.get("/admin/metrics", requirePermission(Permissions.REPORTS_VIEW), (req, res) => {

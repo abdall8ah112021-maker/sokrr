@@ -29,14 +29,14 @@ export const CardPage: React.FC<CardPageProps> = ({ setCurrentTab }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4 space-y-8 text-right">
+    <div className="max-w-4xl mx-auto py-6 sm:py-10 px-4 space-y-6 sm:space-y-8 text-right">
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-sky-950/70 border border-sky-400/30 text-sky-400 text-xs font-semibold">
           <Sparkles className="w-3.5 h-3.5" />
           <span>كارت الولاء البلاستيكي المعتمد</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white">كارتك الذكي ورمز الـ QR</h1>
-        <p className="text-sm text-slate-400 max-w-lg mx-auto">
+        <h1 className="text-2xl sm:text-4xl font-black text-white">كارتك الذكي ورمز الـ QR</h1>
+        <p className="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto">
           أبرز هذا الكارت أو رمز الـ QR للكاشير عند كل عملية شراء لتجميع النقاط الفورية والاستفادة من خصومات الشركاء.
         </p>
       </div>
@@ -47,7 +47,7 @@ export const CardPage: React.FC<CardPageProps> = ({ setCurrentTab }) => {
             <AlertTriangle className="w-5 h-5 shrink-0" />
             <span>تم إرسال طلبك للمسؤول، يرجى انتظار الموافقة لتفعيل كارتك</span>
           </div>
-          <p className="text-xs text-amber-200/80 mr-7">
+          <p className="text-xs text-amber-200/80 sm:mr-7">
             طلبك قيد المراجعة من قبل إدارة المنظومة. سيتم إصدار وتفعيل كارتك تلقائياً فور مراجعة البيانات واعتمادها.
           </p>
         </div>
@@ -55,7 +55,7 @@ export const CardPage: React.FC<CardPageProps> = ({ setCurrentTab }) => {
 
       {/* 3D Interactive Card Showcase */}
       <div className="flex flex-col items-center">
-        <div className="w-full max-w-lg p-6 sm:p-10 rounded-3xl bg-[#0c111e] border border-sky-500/20 shadow-2xl flex flex-col items-center">
+        <div className="w-full max-w-lg p-4 sm:p-10 rounded-3xl bg-[#0c111e] border border-sky-500/20 shadow-2xl flex flex-col items-center">
           <Card3D card={card} customer={customer} pointsBalance={pointAccount?.balance || 0} />
         </div>
       </div>

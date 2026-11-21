@@ -126,8 +126,8 @@ export const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ orderId, set
 
         {/* State Machine Progress Stepper */}
         {order.status !== 'CANCELLED' && (
-          <div className="py-4">
-            <div className="grid grid-cols-5 gap-2 text-center text-xs">
+          <div className="py-4 overflow-x-auto no-scrollbar -mx-2 px-2">
+            <div className="grid grid-cols-5 gap-2 text-center text-[11px] sm:text-xs min-w-[440px] sm:min-w-0">
               {steps.map((st, idx) => {
                 const isPassed = currentStepIndex >= idx;
                 const isCurrent = currentStepIndex === idx;
@@ -199,6 +199,12 @@ export const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ orderId, set
                   : `${order.totalCash} ج.م`}
               </span>
             </div>
+            {order.paymentType === 'CASH' && (order.pointsEarned || 0) > 0 && (
+              <div className="flex justify-between sm:justify-end sm:gap-6 text-xs font-bold text-amber-400 pt-1">
+                <span className="text-amber-200 font-sans">النقاط المكتسبة من الطلب:</span>
+                <span>+{order.pointsEarned} نقطة</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -209,7 +215,7 @@ export const OrderDetailsPage: React.FC<OrderDetailsPageProps> = ({ orderId, set
           <div className="max-w-md w-full p-6 rounded-3xl bg-[#0c101c] border border-slate-800 text-right space-y-4">
             <h3 className="text-base font-bold text-white">إلغاء الطلب رقم {order.orderNumber}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              يرجى توضيح سبب الإلغاء. في حال كان الطلب مستبدلاً بالنقاط، فسيتم إرجاع النقاط بالكامل إلى محفظتك فورياً.
+              يرجى توضيح سبب الإلغاء. في حال كان الطلب مستبدلاً بالنقاط سيتم إرجاع النقاط لمحفظتك، وفي حال كان طلباً نقدياً سيتم خصم النقاط المكتسبة منه تلقائياً.
             </p>
             <textarea
               rows={3}

@@ -7,7 +7,6 @@ import {
   CardStatus,
   CardAction,
   PointLedgerType,
-  ServiceRequestStatus,
   DiscountType,
   OfferStatus,
   ProductStatus,
@@ -185,22 +184,6 @@ export interface ServiceEntity {
   updatedAt: string;
 }
 
-export interface ServiceRequestEntity {
-  id: string;
-  requestNumber: string;
-  customerId: string;
-  serviceId: string;
-  businessId?: string;
-  status: ServiceRequestStatus;
-  customerNotes?: string;
-  adminNotes?: string;
-  cancellationReason?: string;
-  rating?: number;
-  ratingComment?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface OfferEntity {
   id: string;
   businessId: string;
@@ -227,6 +210,8 @@ export interface ProductEntity {
   paymentType: PaymentType;
   cashPrice: number;
   pointsPrice: number;
+  rewardPoints?: number;
+  discount?: number;
   inventory: number;
   lowStockThreshold: number;
   status: ProductStatus;
@@ -255,6 +240,7 @@ export interface OrderEntity {
   deliveryFee: number;
   totalCash: number;
   totalPoints: number;
+  pointsEarned?: number;
   deliveryAddress: {
     title: string;
     recipient: string;
@@ -407,9 +393,23 @@ export interface GovernorateEntity {
   deliveryFee: number;
 }
 
+export interface BiometricCredentialEntity {
+  id: string;
+  userId: string;
+  credentialId: string;
+  publicKey: string; // base64url SPKI public key when available
+  algorithm: number; // COSE algorithm (e.g. -7 for ES256, -257 for RS256)
+  counter: number;
+  deviceName: string;
+  transports?: string[];
+  createdAt: string;
+  lastUsedAt?: string | null;
+}
+
 export interface DatabaseSchema {
   users: UserEntity[];
   refreshTokens: Array<{ id: string; tokenHash: string; userId: string; isRevoked: boolean; expiresAt: string; createdAt: string }>;
+  biometricCredentials: BiometricCredentialEntity[];
   customers: CustomerEntity[];
   cards: CardEntity[];
   cardHistory: CardHistoryEntity[];
@@ -420,7 +420,6 @@ export interface DatabaseSchema {
   transactions: TransactionEntity[];
   sectors: SectorEntity[];
   services: ServiceEntity[];
-  serviceRequests: ServiceRequestEntity[];
   offers: OfferEntity[];
   productCategories: Array<{ id: string; nameAr: string; nameEn: string; slug: string }>;
   products: ProductEntity[];
@@ -466,7 +465,36 @@ class SugarDatabase {
     if (fs.existsSync(this.filePath)) {
       try {
         const raw = fs.readFileSync(this.filePath, 'utf-8');
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed.biometricCredentials)) {
+          parsed.biometricCredentials = [];
+        }
+        // Purge legacy bookings/reservations if present
+        if ('serviceRequests' in parsed) {
+          delete parsed.serviceRequests;
+        }
+        // Ensure merchant purchase points are disabled & store reward rate setting exists
+        if (Array.isArray(parsed.settings)) {
+          const merchantPts = parsed.settings.find((s: any) => s.key === 'points_per_purchase');
+          if (merchantPts) {
+            merchantPts.value = '0';
+            merchantPts.description = 'النقاط المكتسبة من فواتير التجار (ملغاة - النقاط تُكسب من متجر الموقع فقط)';
+          }
+          if (!parsed.settings.some((s: any) => s.key === 'store_points_per_100_egp')) {
+            parsed.settings.push({
+              id: 'set_store_pts',
+              key: 'store_points_per_100_egp',
+              value: '10',
+              category: 'points',
+              type: 'number',
+              description: 'عدد النقاط المكتسبة لكل 100 ج.م عند شراء المنتجات من متجر الموقع الرسمي',
+              isSensitive: false,
+              updatedAt: new Date().toISOString(),
+              updatedBy: 'usr_super_admin_01',
+            });
+          }
+        }
+        return parsed;
       } catch {
         // Fallback to initial seed
       }
@@ -523,7 +551,7 @@ class SugarDatabase {
         slug: 'car-detailing-vip',
         icon: 'Car',
         shortDescription: 'خدمة غسيل وعناية وتلميع احترافي للسيارات بخصم حصري لحاملي الكارت.',
-        fullDescription: 'تشمل الخدمة فحصاً دقيقاً، غسيلاً بالبخار داخلياً وخارجياً، معالجة الجلد، وطبقة نانو سيراميك لحماية طلاء السيارة مع إضافة نقاط ولاء فورية لحسابك.',
+        fullDescription: 'تشمل الخدمة فحصاً دقيقاً، غسيلاً بالبخار داخلياً وخارجياً، معالجة الجلد، وطبقة نانو سيراميك لحماية طلاء السيارة بخصم خاص لأعضاء Sugar Business.',
         targetAudience: 'أصحاب السيارات الباحثين عن خدمة عناية متكاملة ومضمونة',
         sectorId: 'sec_04',
         isActive: true,
@@ -592,6 +620,7 @@ class SugarDatabase {
         paymentType: 'CASH',
         cashPrice: 1250,
         pointsPrice: 0,
+        rewardPoints: 125,
         inventory: 18,
         lowStockThreshold: 4,
         status: 'ACTIVE',
@@ -609,6 +638,7 @@ class SugarDatabase {
         paymentType: 'POINTS',
         pointsPrice: 300,
         cashPrice: 0,
+        rewardPoints: 0,
         inventory: 22,
         lowStockThreshold: 5,
         status: 'ACTIVE',
@@ -626,6 +656,7 @@ class SugarDatabase {
         paymentType: 'CASH',
         cashPrice: 890,
         pointsPrice: 0,
+        rewardPoints: 90,
         inventory: 14,
         lowStockThreshold: 3,
         status: 'ACTIVE',
@@ -669,8 +700,8 @@ class SugarDatabase {
       {
         id: 'faq_02',
         category: 'النقاط والمكافآت',
-        question: 'كم عدد النقاط التي أحصل عليها مع كل عملية شراء؟',
-        answer: 'القيمة الافتراضية هي 10 نقاط لكل عملية شراء مؤكدة عبر مسح الكارت، وقد تمنح بعض المتاجر الشريكة نقاطاً مضاعفة خلال فترات العروض الخاصة.',
+        question: 'كيف أحصل على نقاط الولاء في حسابي؟',
+        answer: 'تُكتسب نقاط الولاء حصرياً عند شراء المنتجات النقدية من متجر Sugar Business الرسمي على الموقع، حيث تُضاف النقاط تلقائياً إلى رصيدك فور تأكيد الطلب، ويمكنك استبدالها لاحقاً بمنتجات المكافآت.',
         order: 2,
         isVisible: true,
       },
@@ -740,10 +771,21 @@ class SugarDatabase {
       {
         id: 'set_01',
         key: 'points_per_purchase',
+        value: '0',
+        category: 'points',
+        type: 'number',
+        description: 'النقاط المكتسبة من فواتير التجار (ملغاة - النقاط تُكسب من متجر الموقع فقط)',
+        isSensitive: false,
+        updatedAt: now,
+        updatedBy: 'usr_super_admin_01',
+      },
+      {
+        id: 'set_store_pts',
+        key: 'store_points_per_100_egp',
         value: '10',
         category: 'points',
         type: 'number',
-        description: 'عدد النقاط المكتسبة لكل عملية شراء افتراضية عند مسح الكارت',
+        description: 'عدد النقاط المكتسبة لكل 100 ج.م عند شراء المنتجات من متجر الموقع الرسمي',
         isSensitive: false,
         updatedAt: now,
         updatedBy: 'usr_super_admin_01',
@@ -908,6 +950,7 @@ class SugarDatabase {
     return {
       users: [superAdminUser],
       refreshTokens: [],
+      biometricCredentials: [],
       customers: [],
       cards: [],
       cardHistory: [],
@@ -918,7 +961,6 @@ class SugarDatabase {
       transactions: [],
       sectors,
       services,
-      serviceRequests: [],
       offers: [],
       productCategories,
       products,
@@ -972,7 +1014,11 @@ class SugarDatabase {
     return user;
   }
 
-  recordLoginAttempt(phone: string, success: boolean, ip?: string): { locked: boolean; lockUntil?: string } {
+  recordLoginAttempt(
+    phone: string,
+    success: boolean,
+    ip?: string
+  ): { locked: boolean; lockUntil?: string; lockDurationMinutes?: number; failedAttempts?: number } {
     const user = this.findUserByPhone(phone);
     if (!user) return { locked: false };
 
@@ -988,9 +1034,11 @@ class SugarDatabase {
     }
 
     user.failedLoginAttempts += 1;
-    if (user.failedLoginAttempts >= 5) {
-      // 5 minutes lockout
-      const lockUntil = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
+    if (user.failedLoginAttempts > 5) {
+      // 6th failed attempt (first error after 5): 1 minute; each subsequent error multiplies by 5 (1 -> 5 -> 25 -> 125...)
+      const escalationStep = user.failedLoginAttempts - 6;
+      const lockDurationMinutes = Math.min(Math.pow(5, escalationStep), 525600);
+      const lockUntil = new Date(now.getTime() + lockDurationMinutes * 60 * 1000).toISOString();
       user.lockoutUntil = lockUntil;
       this.recordAuditLog({
         actorId: user.id,
@@ -999,14 +1047,97 @@ class SugarDatabase {
         entity: 'USER',
         entityId: user.id,
         ip,
-        reason: 'تم قفل الحساب مؤقتاً لمدة 5 دقائق لتجاوز 5 محاولات دخول خاطئة متتالية',
+        reason: `تم إيقاف محاولات الدخول لمدة ${lockDurationMinutes} دقيقة بعد ${user.failedLoginAttempts} محاولات فاشلة متتالية`,
       });
       this.persist();
-      return { locked: true, lockUntil };
+      return {
+        locked: true,
+        lockUntil,
+        lockDurationMinutes,
+        failedAttempts: user.failedLoginAttempts,
+      };
     }
 
     this.persist();
-    return { locked: false };
+    return { locked: false, failedAttempts: user.failedLoginAttempts };
+  }
+
+  // ----------------------------------------------------
+  // BIOMETRIC / WEBAUTHN CREDENTIALS
+  // ----------------------------------------------------
+  getBiometricCredentialsByUserId(userId: string): BiometricCredentialEntity[] {
+    if (!Array.isArray(this.data.biometricCredentials)) {
+      this.data.biometricCredentials = [];
+    }
+    return this.data.biometricCredentials.filter((c) => c.userId === userId);
+  }
+
+  findBiometricCredentialByCredentialId(credentialId: string): BiometricCredentialEntity | undefined {
+    if (!Array.isArray(this.data.biometricCredentials)) {
+      this.data.biometricCredentials = [];
+    }
+    return this.data.biometricCredentials.find((c) => c.credentialId === credentialId);
+  }
+
+  findBiometricCredentialsByPhone(phone: string): BiometricCredentialEntity[] {
+    const user = this.findUserByPhone(phone);
+    if (!user) return [];
+    return this.getBiometricCredentialsByUserId(user.id);
+  }
+
+  addBiometricCredential(input: {
+    userId: string;
+    credentialId: string;
+    publicKey: string;
+    algorithm?: number;
+    counter?: number;
+    deviceName: string;
+    transports?: string[];
+  }): BiometricCredentialEntity {
+    if (!Array.isArray(this.data.biometricCredentials)) {
+      this.data.biometricCredentials = [];
+    }
+    // Replace if credentialId already exists for this user
+    this.data.biometricCredentials = this.data.biometricCredentials.filter(
+      (c) => c.credentialId !== input.credentialId
+    );
+    const record: BiometricCredentialEntity = {
+      id: `bio_${crypto.randomUUID().slice(0, 8)}`,
+      userId: input.userId,
+      credentialId: input.credentialId,
+      publicKey: input.publicKey,
+      algorithm: input.algorithm ?? -7,
+      counter: input.counter ?? 0,
+      deviceName: input.deviceName || 'جهاز شخصي',
+      transports: input.transports || ['internal'],
+      createdAt: new Date().toISOString(),
+      lastUsedAt: null,
+    };
+    this.data.biometricCredentials.push(record);
+    this.persist();
+    return record;
+  }
+
+  updateBiometricCredentialUsage(id: string, counter?: number): void {
+    if (!Array.isArray(this.data.biometricCredentials)) return;
+    const cred = this.data.biometricCredentials.find((c) => c.id === id);
+    if (!cred) return;
+    if (typeof counter === 'number' && counter > cred.counter) {
+      cred.counter = counter;
+    }
+    cred.lastUsedAt = new Date().toISOString();
+    this.persist();
+  }
+
+  deleteBiometricCredential(id: string, userId: string): boolean {
+    if (!Array.isArray(this.data.biometricCredentials)) return false;
+    const before = this.data.biometricCredentials.length;
+    this.data.biometricCredentials = this.data.biometricCredentials.filter(
+      (c) => !(c.id === id && c.userId === userId)
+    );
+    const removed = this.data.biometricCredentials.length < before;
+    if (removed) this.persist();
+    return removed;
   }
 
   // ----------------------------------------------------
@@ -1447,9 +1578,8 @@ class SugarDatabase {
       throw new Error('انتهت صلاحية الكارت. يرجى من العميل طلب تجديد الكارت.');
     }
 
-    // Points calculation - server authoritative
-    const defaultPoints = parseInt(this.getSettingValue('points_per_purchase', '10'), 10);
-    const pointsAwarded = defaultPoints;
+    // Merchant invoices no longer award loyalty points (points are earned exclusively from the official store)
+    const pointsAwarded = 0;
 
     const txNumber = `TX-PURCHASE-${Date.now()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
     const transaction: TransactionEntity = {
@@ -1470,34 +1600,6 @@ class SugarDatabase {
 
     // Update last scan timestamp
     card.lastScanAt = new Date().toISOString();
-
-    // 6 months points expiry
-    const expiryMonths = parseInt(this.getSettingValue('points_expiry_months', '6'), 10);
-    const expiresAt = new Date(Date.now() + expiryMonths * 30 * 24 * 60 * 60 * 1000).toISOString();
-
-    // Add points to ledger
-    this.addPointLedgerEntry({
-      customerId: card.customerId,
-      type: 'EARN',
-      points: pointsAwarded,
-      actorId: data.employeeId || business.userId,
-      reason: `عملية شراء مؤكدة لدى ${business.businessName}`,
-      referenceId: transaction.id,
-      expiresAt,
-    });
-
-    // Notify customer
-    const customer = this.findCustomerById(card.customerId);
-    if (customer) {
-      this.createNotification({
-        userId: customer.userId,
-        title: 'تمت إضافة نقاط جديدة لحسابك!',
-        message: `حصلت على ${pointsAwarded} نقطة من ${business.businessName}. رصيدك الجديد في أمان.`,
-        type: 'POINTS_EARNED',
-        priority: 'MEDIUM',
-        deepLink: '/points',
-      });
-    }
 
     this.persist();
     return { transaction, pointsAwarded };
@@ -1584,29 +1686,6 @@ class SugarDatabase {
 
   findServiceById(id: string): ServiceEntity | undefined {
     return this.data.services.find((s) => s.id === id);
-  }
-
-  createServiceRequest(data: { customerId: string; serviceId: string; customerNotes?: string }): ServiceRequestEntity {
-    const seq = this.data.serviceRequests.length + 1;
-    const requestNumber = `REQ-${new Date().getFullYear()}-${seq.toString().padStart(4, '0')}`;
-    const req: ServiceRequestEntity = {
-      id: `sr_${crypto.randomUUID().slice(0, 8)}`,
-      requestNumber,
-      customerId: data.customerId,
-      serviceId: data.serviceId,
-      status: 'NEW',
-      customerNotes: data.customerNotes,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.data.serviceRequests.push(req);
-    this.persist();
-    return req;
-  }
-
-  getServiceRequests(customerId?: string): ServiceRequestEntity[] {
-    if (customerId) return this.data.serviceRequests.filter((r) => r.customerId === customerId);
-    return this.data.serviceRequests;
   }
 
   // ----------------------------------------------------
@@ -1700,23 +1779,50 @@ class SugarDatabase {
   }
 
   // ----------------------------------------------------
-  // STORE & ORDERS (Immutable snapshots, strict payment type)
+  // STORE & ORDERS (Immutable snapshots, strict payment type, store-only points)
   // ----------------------------------------------------
   getProductCategories() {
     return this.data.productCategories;
   }
 
+  calculateProductRewardPoints(product: ProductEntity): number {
+    if (product.paymentType !== 'CASH') return 0;
+    if (typeof product.rewardPoints === 'number' && product.rewardPoints > 0) {
+      return Math.round(product.rewardPoints);
+    }
+    const ratePer100 = parseInt(this.getSettingValue('store_points_per_100_egp', '10'), 10);
+    if (!Number.isFinite(ratePer100) || ratePer100 <= 0) return 0;
+    return Math.max(1, Math.round((product.cashPrice * ratePer100) / 100));
+  }
+
   getProducts(filter?: { paymentType?: PaymentType; categoryId?: string; status?: ProductStatus }): ProductEntity[] {
-    return this.data.products.filter((p) => {
-      if (filter?.paymentType && p.paymentType !== filter.paymentType) return false;
-      if (filter?.categoryId && p.categoryId !== filter.categoryId) return false;
-      if (filter?.status && p.status !== filter.status) return false;
-      return p.status === 'ACTIVE';
-    });
+    return this.data.products
+      .filter((p) => {
+        if (filter?.paymentType && p.paymentType !== filter.paymentType) return false;
+        if (filter?.categoryId && p.categoryId !== filter.categoryId) return false;
+        if (filter?.status && p.status !== filter.status) return false;
+        return p.status === 'ACTIVE';
+      })
+      .map((p) => ({
+        ...p,
+        rewardPoints: this.calculateProductRewardPoints(p),
+      }));
+  }
+
+  getAllProducts(): ProductEntity[] {
+    return this.data.products.map((p) => ({
+      ...p,
+      rewardPoints: this.calculateProductRewardPoints(p),
+    }));
   }
 
   findProductById(id: string): ProductEntity | undefined {
-    return this.data.products.find((p) => p.id === id);
+    const p = this.data.products.find((item) => item.id === id);
+    if (!p) return undefined;
+    return {
+      ...p,
+      rewardPoints: this.calculateProductRewardPoints(p),
+    };
   }
 
   createProduct(data: Omit<ProductEntity, 'id' | 'createdAt' | 'updatedAt'>): ProductEntity {
@@ -1728,15 +1834,23 @@ class SugarDatabase {
     };
     this.data.products.push(product);
     this.persist();
-    return product;
+    return { ...product, rewardPoints: this.calculateProductRewardPoints(product) };
   }
 
   updateProduct(id: string, updates: Partial<ProductEntity>): ProductEntity | undefined {
-    const prd = this.findProductById(id);
+    const prd = this.data.products.find((p) => p.id === id);
     if (!prd) return undefined;
     Object.assign(prd, updates, { updatedAt: new Date().toISOString() });
     this.persist();
-    return prd;
+    return { ...prd, rewardPoints: this.calculateProductRewardPoints(prd) };
+  }
+
+  deleteProduct(id: string): boolean {
+    const idx = this.data.products.findIndex((p) => p.id === id);
+    if (idx === -1) return false;
+    this.data.products.splice(idx, 1);
+    this.persist();
+    return true;
   }
 
   createOrder(data: {
@@ -1756,9 +1870,10 @@ class SugarDatabase {
     const snapshots: OrderItemSnapshot[] = [];
     let subtotalCash = 0;
     let subtotalPoints = 0;
+    let totalPointsEarned = 0;
 
     for (const item of data.items) {
-      const product = this.findProductById(item.productId);
+      const product = this.data.products.find((p) => p.id === item.productId);
       if (!product || product.status !== 'ACTIVE') {
         throw new Error(`المنتج ${item.productId} غير متاح حالياً`);
       }
@@ -1784,25 +1899,27 @@ class SugarDatabase {
 
       subtotalCash += product.cashPrice * item.quantity;
       subtotalPoints += product.pointsPrice * item.quantity;
+      if (data.paymentType === 'CASH') {
+        totalPointsEarned += this.calculateProductRewardPoints(product) * item.quantity;
+      }
     }
 
     // Delivery fee from governorate
     const gov = this.data.governorates.find((g) => g.nameAr === data.deliveryAddress.governorate);
     const deliveryFee = gov?.available ? gov.deliveryFee : 50;
 
-    // Points handling
+    // Points redemption handling
     if (data.paymentType === 'POINTS') {
       const account = this.getPointAccount(customer.id);
       if (account.balance < subtotalPoints) {
         throw new Error(`رصيدك الحالي (${account.balance} نقطة) لا يكفي لإتمام الطلب بقيمة ${subtotalPoints} نقطة`);
       }
-      // Reserve/deduct points
       this.addPointLedgerEntry({
         customerId: customer.id,
         type: 'SPEND',
         points: -subtotalPoints,
         actorId: customer.userId,
-        reason: 'طلب منتجات من متجر Sugar Business',
+        reason: 'استبدال نقاط بمنتجات من متجر Sugar Business',
       });
     }
 
@@ -1819,14 +1936,18 @@ class SugarDatabase {
       subtotalCash,
       subtotalPoints,
       deliveryFee,
-      totalCash: data.paymentType === 'CASH' ? subtotalCash + deliveryFee : deliveryFee, // cash delivery for points order
+      totalCash: data.paymentType === 'CASH' ? subtotalCash + deliveryFee : deliveryFee,
       totalPoints: subtotalPoints,
+      pointsEarned: data.paymentType === 'CASH' ? totalPointsEarned : 0,
       deliveryAddress: data.deliveryAddress,
       statusTimeline: [
         {
           status: 'PENDING',
           timestamp: now,
-          note: data.paymentType === 'POINTS' ? 'تم استلام الطلب وحجز النقاط بنجاح' : 'تم استلام طلب الشراء والدفع عند الاستلام (COD)',
+          note:
+            data.paymentType === 'POINTS'
+              ? 'تم استلام الطلب وخصم النقاط بنجاح'
+              : `تم استلام طلب الشراء والدفع عند الاستلام (COD)${totalPointsEarned > 0 ? ` مع إضافة ${totalPointsEarned} نقطة مكافأة` : ''}`,
         },
       ],
       items: snapshots,
@@ -1836,7 +1957,32 @@ class SugarDatabase {
 
     this.data.orders.push(order);
 
-    // Notify customer
+    // Award loyalty points exclusively for purchasing products from the official site store
+    if (data.paymentType === 'CASH' && totalPointsEarned > 0) {
+      const expiryMonths = parseInt(this.getSettingValue('points_expiry_months', '6'), 10);
+      const expiresAt = new Date(Date.now() + expiryMonths * 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      this.addPointLedgerEntry({
+        customerId: customer.id,
+        type: 'EARN',
+        points: totalPointsEarned,
+        actorId: 'STORE_SYSTEM',
+        reason: `مكافأة شراء منتجات من متجر الموقع (طلب رقم ${orderNumber})`,
+        referenceId: order.id,
+        expiresAt,
+      });
+
+      this.createNotification({
+        userId: customer.userId,
+        title: 'تمت إضافة نقاط مكافأة المتجر!',
+        message: `حصلت على ${totalPointsEarned} نقطة مقابل شرائك من متجر Sugar Business (الطلب ${orderNumber}).`,
+        type: 'POINTS_EARNED',
+        priority: 'MEDIUM',
+        deepLink: '/points',
+      });
+    }
+
+    // Notify customer about order
     this.createNotification({
       userId: customer.userId,
       title: 'تم استلام طلبك بنجاح',
@@ -1851,8 +1997,22 @@ class SugarDatabase {
   }
 
   getOrders(customerId?: string): OrderEntity[] {
-    if (customerId) return this.data.orders.filter((o) => o.customerId === customerId);
-    return this.data.orders;
+    const list = customerId
+      ? this.data.orders.filter((o) => o.customerId === customerId)
+      : this.data.orders;
+    return [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  getAllOrdersWithCustomer() {
+    return this.getOrders().map((o) => {
+      const customer = this.findCustomerById(o.customerId);
+      const user = customer ? this.findUserById(customer.userId) : undefined;
+      return {
+        ...o,
+        customerName: customer?.fullName || o.deliveryAddress?.recipient || 'عميل',
+        customerPhone: user?.phone || o.deliveryAddress?.phone || '',
+      };
+    });
   }
 
   findOrderById(id: string): OrderEntity | undefined {
@@ -1863,7 +2023,11 @@ class SugarDatabase {
     const order = this.findOrderById(orderId);
     if (!order) throw new Error('الطلب غير موجود');
 
+    const previousStatus = order.status;
     order.status = newStatus;
+    if (newStatus === 'CANCELLED' && note) {
+      order.cancellationReason = note;
+    }
     order.statusTimeline.push({
       status: newStatus,
       timestamp: new Date().toISOString(),
@@ -1871,15 +2035,39 @@ class SugarDatabase {
     });
     order.updatedAt = new Date().toISOString();
 
-    // If order was cancelled and was paid by points, release points back
-    if (newStatus === 'CANCELLED' && order.paymentType === 'POINTS') {
-      this.addPointLedgerEntry({
-        customerId: order.customerId,
-        type: 'RELEASE',
-        points: order.totalPoints,
-        actorId: 'SYSTEM',
-        reason: `إرجاع نقاط الطلب الملغي رقم ${order.orderNumber}`,
-      });
+    if (newStatus === 'CANCELLED' && previousStatus !== 'CANCELLED') {
+      // Restore inventory
+      for (const item of order.items) {
+        const prd = this.data.products.find((p) => p.id === item.productId);
+        if (prd) {
+          prd.inventory += item.quantity;
+          if (prd.status === 'OUT_OF_STOCK' && prd.inventory > 0) {
+            prd.status = 'ACTIVE';
+          }
+        }
+      }
+
+      // Refund spent points for POINTS orders
+      if (order.paymentType === 'POINTS' && order.totalPoints > 0) {
+        this.addPointLedgerEntry({
+          customerId: order.customerId,
+          type: 'REVERSE',
+          points: order.totalPoints,
+          actorId: 'SYSTEM',
+          reason: `إرجاع نقاط الطلب الملغي رقم ${order.orderNumber}`,
+        });
+      }
+
+      // Reverse earned points for cancelled CASH store orders
+      if (order.paymentType === 'CASH' && (order.pointsEarned || 0) > 0) {
+        this.addPointLedgerEntry({
+          customerId: order.customerId,
+          type: 'REVERSE',
+          points: -(order.pointsEarned || 0),
+          actorId: 'SYSTEM',
+          reason: `استرداد النقاط المكتسبة بعد إلغاء طلب المتجر رقم ${order.orderNumber}`,
+        });
+      }
     }
 
     this.persist();

@@ -85,67 +85,67 @@ export const HomePage: React.FC<HomePageProps> = ({
   ];
 
   return (
-    <div className="space-y-24">
+    <div className="space-y-14 sm:space-y-24">
       {/* ================= 1. HERO SECTION ================= */}
-      <section className="relative pt-12 pb-20 overflow-hidden">
+      <section className="relative pt-6 pb-10 sm:pt-12 sm:pb-20 overflow-hidden">
         {/* Ambient lighting glows */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-sky-500/10 rounded-full blur-[140px] pointer-events-none" />
         <div className="absolute top-10 left-10 w-72 h-72 bg-cyan-400/5 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left/Main Column: Headings & CTAs */}
-            <div className="lg:col-span-7 space-y-6 text-right">
-              <div className="inline-flex items-center gap-2 py-1.5 px-3 rounded-full bg-sky-950/70 border border-sky-400/30 text-sky-300 text-xs font-semibold shadow-inner">
-                <Sparkles className="w-3.5 h-3.5 text-sky-400 animate-spin" style={{ animationDuration: '8s' }} />
+            <div className="lg:col-span-7 space-y-5 sm:space-y-6 text-right">
+              <div className="inline-flex items-center gap-2 py-1.5 px-3 rounded-full bg-sky-950/70 border border-sky-400/30 text-sky-300 text-[11px] sm:text-xs font-semibold shadow-inner">
+                <Sparkles className="w-3.5 h-3.5 text-sky-400 animate-spin shrink-0" style={{ animationDuration: '8s' }} />
                 <span>{content.heroBadge}</span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]">
+              <h1 className="text-2xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.2] sm:leading-[1.15]">
                 {content.heroTitleLine1} <br />
                 <span className="bg-gradient-to-r from-sky-400 via-sky-300 to-cyan-300 bg-clip-text text-transparent">
                   {content.heroTitleHighlight}
                 </span>
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
+              <p className="text-sm sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
                 {content.heroDescription}
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 pt-1 sm:pt-2">
                 <button
                   type="button"
                   onClick={() => setCurrentTab(user ? (user.role === 'CUSTOMER' ? 'card' : 'business-dashboard') : 'register-customer')}
-                  className="py-3.5 px-7 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-cyan-300 hover:from-sky-300 hover:to-cyan-200 shadow-xl shadow-sky-500/25 hover:shadow-sky-400/40 transition-all flex items-center gap-2 text-sm sm:text-base group"
+                  className="w-full sm:w-auto justify-center py-3 sm:py-3.5 px-6 sm:px-7 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-sky-400 via-sky-300 to-cyan-300 hover:from-sky-300 hover:to-cyan-200 shadow-xl shadow-sky-500/25 hover:shadow-sky-400/40 transition-all flex items-center gap-2 text-sm sm:text-base group"
                 >
-                  <CreditCard className="w-4 h-4 text-slate-950" />
+                  <CreditCard className="w-4 h-4 text-slate-950 shrink-0" />
                   <span>{user ? 'عرض كارتك الذكي' : content.heroCtaButton}</span>
-                  <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+                  <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform shrink-0" />
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setCurrentTab('directory')}
-                  className="py-3.5 px-6 rounded-xl font-semibold text-slate-200 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-700 hover:border-sky-500/40 transition-all flex items-center gap-2 text-sm sm:text-base"
+                  className="w-full sm:w-auto justify-center py-3 sm:py-3.5 px-6 rounded-xl font-semibold text-slate-200 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-700 hover:border-sky-500/40 transition-all flex items-center gap-2 text-sm sm:text-base"
                 >
-                  <Store className="w-5 h-5 text-sky-400" />
+                  <Store className="w-5 h-5 text-sky-400 shrink-0" />
                   <span>{content.heroSecondaryButton}</span>
                 </button>
               </div>
 
               {/* Trust Indicators */}
-              <div className="pt-6 flex flex-wrap items-center gap-6 text-xs text-slate-400">
+              <div className="pt-3 sm:pt-6 flex flex-wrap items-center gap-x-5 gap-y-2.5 text-xs text-slate-400">
                 <span className="flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-emerald-400" />
+                  <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
                   {content.heroTrustBadge1}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-sky-400" />
+                  <CheckCircle className="w-4 h-4 text-sky-400 shrink-0" />
                   {content.heroTrustBadge2}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-amber-400" />
+                  <Coins className="w-4 h-4 text-amber-400 shrink-0" />
                   {content.heroTrustBadge3}
                 </span>
               </div>
@@ -165,10 +165,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* ================= 2. HOW IT WORKS (SECTION 13) ================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-14">
+        <div className="text-center max-w-3xl mx-auto space-y-2.5 sm:space-y-3 mb-8 sm:mb-14">
           <span className="text-xs font-bold text-sky-400 uppercase tracking-widest">{content.howItWorksBadge}</span>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-white">{content.howItWorksTitle}</h2>
-          <p className="text-sm sm:text-base text-slate-400">
+          <p className="text-xs sm:text-base text-slate-400">
             {content.howItWorksSubtitle}
           </p>
         </div>
@@ -272,11 +272,11 @@ export const HomePage: React.FC<HomePageProps> = ({
                 type="button"
                 onClick={() => {
                   setSelectedServiceId(srv.id);
-                  setCurrentTab('service-detail');
+                  setCurrentTab('services');
                 }}
                 className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-sky-950 hover:text-sky-300 border border-slate-700/80 text-xs font-semibold text-slate-300 transition-colors flex items-center justify-center gap-1.5"
               >
-                <span>تفاصيل الخدمة وحجز موعد</span>
+                <span>استعراض الخدمات المتاحة</span>
                 <ChevronRight className="w-4 h-4 rotate-180" />
               </button>
             </div>
@@ -294,11 +294,11 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
 
           {/* Segmented Filter Control */}
-          <div className="flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl self-start sm:self-auto">
+          <div className="flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl self-start sm:self-auto overflow-x-auto no-scrollbar max-w-full">
             <button
               type="button"
               onClick={() => setStoreFilter('ALL')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                 storeFilter === 'ALL' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -307,7 +307,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <button
               type="button"
               onClick={() => setStoreFilter('POINTS')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                 storeFilter === 'POINTS' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -316,7 +316,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <button
               type="button"
               onClick={() => setStoreFilter('CASH')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                 storeFilter === 'CASH' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -325,7 +325,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {previewProducts.map((p) => (
             <div
               key={p.id}
@@ -341,7 +341,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   alt={p.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute top-2.5 right-2.5">
+                <div className="absolute top-2.5 right-2.5 flex flex-col gap-1 items-start">
                   <span
                     className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${
                       p.paymentType === 'POINTS'
@@ -351,6 +351,11 @@ export const HomePage: React.FC<HomePageProps> = ({
                   >
                     {p.paymentType === 'POINTS' ? 'مكافأة نقاط' : 'دفع عند الاستلام'}
                   </span>
+                  {p.paymentType === 'CASH' && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-950/90 text-amber-300 border border-amber-500/40 font-mono">
+                      +{p.rewardPoints ?? Math.max(1, Math.round(((p.cashPrice || 0) / 100) * 10))} نقطة
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -394,33 +399,33 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* ================= 5. REAL METRICS (FROM DB - SECTION 21) ================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[#0c1220] via-[#080c16] to-[#04060b] border border-sky-500/20 shadow-2xl relative overflow-hidden">
+        <div className="p-5 sm:p-12 rounded-3xl bg-gradient-to-br from-[#0c1220] via-[#080c16] to-[#04060b] border border-sky-500/20 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x-reverse divide-x divide-slate-800/80">
-            <div>
-              <p className="font-mono text-3xl sm:text-5xl font-black text-white tracking-tight">
+          <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-8 text-center md:divide-x-reverse md:divide-x md:divide-slate-800/80">
+            <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
+              <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
                 {metrics?.totalCustomers || 1}
               </p>
-              <p className="text-xs sm:text-sm font-medium text-sky-400 mt-2">{content.statsMembersLabel}</p>
+              <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsMembersLabel}</p>
             </div>
-            <div>
-              <p className="font-mono text-3xl sm:text-5xl font-black text-white tracking-tight">
+            <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
+              <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
                 {metrics?.activeCards || 1}
               </p>
-              <p className="text-xs sm:text-sm font-medium text-sky-400 mt-2">{content.statsCardsLabel}</p>
+              <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsCardsLabel}</p>
             </div>
-            <div>
-              <p className="font-mono text-3xl sm:text-5xl font-black text-white tracking-tight">
+            <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
+              <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
                 {metrics?.listedBusinesses || 1}
               </p>
-              <p className="text-xs sm:text-sm font-medium text-sky-400 mt-2">{content.statsPartnersLabel}</p>
+              <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsPartnersLabel}</p>
             </div>
-            <div>
-              <p className="font-mono text-3xl sm:text-5xl font-black text-white tracking-tight">
+            <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
+              <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
                 {metrics?.totalPointsAwarded || 450}
               </p>
-              <p className="text-xs sm:text-sm font-medium text-sky-400 mt-2">{content.statsPointsLabel}</p>
+              <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsPointsLabel}</p>
             </div>
           </div>
         </div>
@@ -429,16 +434,16 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ================= 6. REVIEWS SLIDER (SECTION 19) ================= */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <span className="text-xs font-bold text-sky-400 uppercase tracking-widest">{content.reviewsBadge}</span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1 mb-8">{content.reviewsTitle}</h2>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1 mb-6 sm:mb-8">{content.reviewsTitle}</h2>
 
-        <div className="relative p-8 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl">
+        <div className="relative p-5 sm:p-8 rounded-3xl bg-[#0b0f1b] border border-slate-800 shadow-xl">
           <div className="flex justify-center gap-1 mb-4 text-amber-400">
             {[...Array(reviews[reviewIndex].rating)].map((_, i) => (
               <Star key={i} className="w-5 h-5 fill-current" />
             ))}
           </div>
 
-          <p className="text-base sm:text-lg text-slate-200 leading-relaxed mb-6 font-medium">
+          <p className="text-sm sm:text-lg text-slate-200 leading-relaxed mb-6 font-medium">
             "{reviews[reviewIndex].comment}"
           </p>
 

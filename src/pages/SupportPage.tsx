@@ -103,7 +103,7 @@ export const SupportPage: React.FC<SupportPageProps> = ({ setCurrentTab, initial
   );
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-10 text-right">
+    <div className="max-w-6xl mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-10 text-right">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-bold text-sky-400 uppercase tracking-widest">خدمة العملاء والدعم الفني</span>
@@ -114,29 +114,29 @@ export const SupportPage: React.FC<SupportPageProps> = ({ setCurrentTab, initial
         </div>
 
         {/* Tab switcher */}
-        <div className="flex items-center gap-2 bg-[#0c101c] p-1.5 rounded-2xl border border-slate-800 self-start sm:self-auto">
+        <div className="flex items-center gap-2 bg-[#0c101c] p-1.5 rounded-2xl border border-slate-800 self-start sm:self-auto overflow-x-auto no-scrollbar max-w-full">
           <button
             type="button"
             onClick={() => setActiveView('tickets')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            className={`whitespace-nowrap shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               activeView === 'tickets'
                 ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="w-4 h-4 shrink-0" />
             <span>تذاكر الدعم</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveView('faq')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            className={`whitespace-nowrap shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               activeView === 'faq'
                 ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <HelpCircle className="w-4 h-4" />
+            <HelpCircle className="w-4 h-4 shrink-0" />
             <span>الأسئلة الشائعة FAQ</span>
           </button>
         </div>
@@ -199,7 +199,7 @@ export const SupportPage: React.FC<SupportPageProps> = ({ setCurrentTab, initial
             </div>
           ) : (
             <form onSubmit={handleCreateTicket} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 mb-1">الاسم</label>
                   <input
@@ -317,16 +317,16 @@ export const SupportPage: React.FC<SupportPageProps> = ({ setCurrentTab, initial
               </div>
 
               {/* Reply Box */}
-              <form onSubmit={handleSendReply} className="flex gap-2 pt-2">
+              <form onSubmit={handleSendReply} className="flex flex-col sm:flex-row gap-2 pt-2">
                 <input
                   type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="اكتب ردك..."
                   required
-                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs text-right"
+                  className="flex-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs text-right"
                 />
-                <button type="submit" className="py-2 px-4 rounded-xl bg-sky-500 text-slate-950 font-bold text-xs">
+                <button type="submit" className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-sky-500 text-slate-950 font-bold text-xs">
                   إرسال
                 </button>
               </form>
