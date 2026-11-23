@@ -258,9 +258,11 @@ export const api = {
     apiRequest(`/support/tickets/${ticketId}/messages`, { method: 'POST', body: JSON.stringify({ message }) }),
   getCMSPage: (slug: string) => apiRequest(`/cms/${slug}`),
   getAllCMSPages: () => apiRequest('/cms/pages'),
-  updateCMSPage: (slug: string, data: { title: string; content: string; metaTitle?: string; metaDesc?: string; status?: string }) =>
+  updateCMSPage: (slug: string, data: { title: string; content: string; sections?: Array<{ id: string; heading: string; body: string }>; metaTitle?: string; metaDesc?: string; status?: string }) =>
     apiRequest(`/admin/cms/${slug}`, { method: 'PUT', body: JSON.stringify(data) }),
   getGovernorates: () => apiRequest('/governorates'),
+  getDiscountPageConfig: () => apiRequest('/discount-services/config'),
+  updateDiscountPageConfig: (data: any) => apiRequest('/admin/discount-services/config', { method: 'PUT', body: JSON.stringify(data) }),
   getDiscountServices: (governorateId?: string) => apiRequest(`/discount-services${governorateId ? `?governorateId=${governorateId}` : ''}`),
   getAllDiscountServices: () => apiRequest('/admin/discount-services'),
   createDiscountService: (data: any) => apiRequest('/admin/discount-services', { method: 'POST', body: JSON.stringify(data) }),

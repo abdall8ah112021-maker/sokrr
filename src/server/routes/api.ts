@@ -1503,13 +1503,13 @@ apiRouter.get('/cms/:slug', (req, res) => {
 
 apiRouter.put('/admin/cms/:slug', requirePermission(Permissions.CMS_MANAGE), (req: AuthenticatedRequest, res) => {
   try {
-    const { title, content, metaTitle, metaDesc, status } = req.body;
-    if (!title || !content) {
+    const { title, content, sections, metaTitle, metaDesc, status } = req.body;
+    if (!title || (content === undefined && !Array.isArray(sections))) {
       res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'العنوان والمحتوى مطلوبان' } });
       return;
     }
     const page = db.upsertCMSPage(
-      { slug: req.params.slug, title, content, metaTitle, metaDesc, status },
+      { slug: req.params.slug, title, content: content || '', sections, metaTitle, metaDesc, status },
       req.user!.id
     );
     res.json({ success: true, data: page });
@@ -1520,6 +1520,23 @@ apiRouter.put('/admin/cms/:slug', requirePermission(Permissions.CMS_MANAGE), (re
 
 apiRouter.get('/governorates', (req, res) => {
   res.json({ success: true, data: db.getGovernorates() });
+});
+
+apiRouter.get('/discount-services/config', (_req, res) => {
+  res.json({ success: true, data: db.getDiscountPageConfig() });
+});
+
+apiRouter.put('/admin/discount-services/config', requirePermission(Permissions.SERVICES_MANAGE), (req: AuthenticatedRequest, res) => {
+  const updated = db.updateDiscountPageConfig(req.body || {});
+  db.recordAuditLog({
+    actorId: req.user!.id,
+    actorRole: req.user!.role,
+    action: 'DISCOUNT_PAGE_CONFIG_UPDATED',
+    entity: 'SYSTEM',
+    entityId: 'discount_page_config',
+    reason: 'تحديث نصوص وعناصر صفحة خصمك عندنا من لوحة الإدارة',
+  });
+  res.json({ success: true, data: updated });
 });
 
 apiRouter.get('/discount-services', (req, res) => {
@@ -1533,19 +1550,37 @@ apiRouter.get('/admin/discount-services', requirePermission(Permissions.SERVICES
 
 apiRouter.post('/admin/discount-services', requirePermission(Permissions.SERVICES_MANAGE), (req: AuthenticatedRequest, res) => {
   try {
-    const { title, governorateId, governorateName, imageUrl, galleryImages, phone, whatsapp, subscriptionPrice, validityDate, description, status } = req.body;
-    if (!title || !phone) {
-      res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'العنوان ورقم الهاتف مطلوبان' } });
+    const {
+      title,
+      discountPercentage,
+      discountLabel,
+      offerDetails,
+      governorateId,
+      governorateName,
+      imageUrl,
+      galleryImages,
+      phone,
+      whatsapp,
+      subscriptionPrice,
+      validityDate,
+      description,
+      status,
+    } = req.body;
+    if (!title) {
+      res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'عنوان العرض أو الخصم مطلوب' } });
       return;
     }
     const service = db.createDiscountService({
       title,
+      discountPercentage: discountPercentage !== undefined && discountPercentage !== '' ? Number(discountPercentage) : undefined,
+      discountLabel: discountLabel ? String(discountLabel).trim() : undefined,
+      offerDetails: offerDetails ? String(offerDetails).trim() : undefined,
       governorateId: governorateId || 'gov_cairo',
       governorateName: governorateName || 'القاهرة',
       imageUrl: imageUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&auto=format&fit=crop&q=80',
       galleryImages: galleryImages || [],
-      phone,
-      whatsapp: whatsapp || phone,
+      phone: phone || '',
+      whatsapp: whatsapp || phone || '',
       subscriptionPrice: Number(subscriptionPrice || 0),
       validityDate: validityDate || '2026-12-31',
       description: description || '',

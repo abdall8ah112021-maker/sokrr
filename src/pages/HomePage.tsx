@@ -442,7 +442,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
             <div className="p-3 rounded-2xl bg-slate-900/40 md:bg-transparent md:p-0 border border-slate-800/60 md:border-0">
               <p className="font-mono text-2xl sm:text-5xl font-black text-white tracking-tight">
-                {metrics?.cardsCount ?? 10800}
+                {metrics?.cardsCount ?? 9891}
               </p>
               <p className="text-[11px] sm:text-sm font-medium text-sky-400 mt-1.5 sm:mt-2">{content.statsCardsLabel}</p>
             </div>

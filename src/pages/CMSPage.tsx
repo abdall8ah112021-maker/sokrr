@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
-import { Shield, FileText, ChevronRight } from 'lucide-react';
-import { CMSPageEntity } from '../server/db';
+import { ChevronRight } from 'lucide-react';
+import { CMSPageItem } from '../types';
 
 interface CMSPageProps {
   slug: string;
@@ -9,15 +9,46 @@ interface CMSPageProps {
 }
 
 export const CMSPage: React.FC<CMSPageProps> = ({ slug, setCurrentTab }) => {
-  const [page, setPage] = useState<any>(null);
+  const [page, setPage] = useState<CMSPageItem | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadPage = useCallback(() => {
     api.getCMSPage(slug)
       .then(setPage)
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [slug]);
+
+  useEffect(() => {
+    setLoading(true);
+    loadPage();
+  }, [loadPage]);
+
+  useEffect(() => {
+    const handleSync = () => loadPage();
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('sugar:approvals:updated', handleSync);
+    let ch: BroadcastChannel | null = null;
+    if ('BroadcastChannel' in window) {
+      try {
+        ch = new BroadcastChannel('sugar_approvals');
+        ch.onmessage = handleSync;
+      } catch {
+        // Ignore BroadcastChannel error
+      }
+    }
+    return () => {
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('sugar:approvals:updated', handleSync);
+      if (ch) {
+        try {
+          ch.close();
+        } catch {
+          // Ignore close error
+        }
+      }
+    };
+  }, [loadPage]);
 
   if (loading || !page) {
     return (
@@ -26,6 +57,8 @@ export const CMSPage: React.FC<CMSPageProps> = ({ slug, setCurrentTab }) => {
       </div>
     );
   }
+
+  const sections = Array.isArray(page.sections) ? page.sections : [];
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 space-y-6 text-right">
@@ -38,11 +71,37 @@ export const CMSPage: React.FC<CMSPageProps> = ({ slug, setCurrentTab }) => {
         <span>العودة للرئيسية</span>
       </button>
 
-      <div className="p-8 sm:p-12 rounded-3xl bg-[#0c101c] border border-slate-800 shadow-xl space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-black text-white">{page.title}</h1>
-        <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-line border-t border-slate-800 pt-6">
-          {page.content}
+      <div className="p-6 sm:p-10 rounded-3xl bg-[#0c101c] border border-slate-800 shadow-xl space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-white">{page.title}</h1>
+          {page.metaDesc && (
+            <p className="text-xs sm:text-sm text-slate-400">{page.metaDesc}</p>
+          )}
         </div>
+
+        {page.content && (
+          <div className="text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-line border-t border-slate-800 pt-6">
+            {page.content}
+          </div>
+        )}
+
+        {sections.length > 0 && (
+          <div className="space-y-4 border-t border-slate-800 pt-6">
+            {sections.map((sec, idx) => (
+              <div
+                key={sec.id || idx}
+                className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2"
+              >
+                <h2 className="text-base sm:text-lg font-bold text-sky-300">
+                  {sec.heading}
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+                  {sec.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

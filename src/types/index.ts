@@ -315,11 +315,18 @@ export interface Governorate {
   deliveryFee: number;
 }
 
+export interface CMSPageSection {
+  id: string;
+  heading: string;
+  body: string;
+}
+
 export interface CMSPageItem {
   id: string;
   slug: string;
   title: string;
   content: string;
+  sections?: CMSPageSection[];
   metaTitle?: string;
   metaDesc?: string;
   version: number;
@@ -330,6 +337,9 @@ export interface CMSPageItem {
 export interface DiscountService {
   id: string;
   title: string;
+  discountPercentage?: number;
+  discountLabel?: string;
+  offerDetails?: string;
   governorateId: string;
   governorateName: string;
   imageUrl: string;
@@ -341,4 +351,21 @@ export interface DiscountService {
   description: string;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
+}
+
+export interface DiscountPageBlock {
+  id: string;
+  title: string;
+  badge?: string;
+  content: string;
+}
+
+export interface DiscountPageConfig {
+  badge: string;
+  title: string;
+  subtitle: string;
+  announcement: string;
+  emptyMessage: string;
+  customBlocks: DiscountPageBlock[];
+  updatedAt?: string;
 }

@@ -26,6 +26,8 @@ interface AdminDataContextType {
   cmsPages: any[];
   health: any;
   directoryConfig: any;
+  discountServices: any[];
+  discountPageConfig: any;
   pendingApprovals: PendingApprovalsData;
   refetchData: () => void;
   refetchApprovals: () => void;
@@ -49,7 +51,8 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     queryFn: async () => {
       const [
         metrics, businesses, customers, cards, systemSettings,
-        jobs, auditLogs, health, services, offers, governorates, news, cmsPages, products, orders, directoryConfig
+        jobs, auditLogs, health, services, offers, governorates, news, cmsPages, products, orders, directoryConfig,
+        discountServices, discountPageConfig
       ] = await Promise.all([
         api.getAdminMetrics(),
         api.getAllBusinesses(),
@@ -67,8 +70,14 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
         api.getAdminProducts().catch(() => api.getProducts()),
         api.getAdminOrders().catch(() => []),
         api.getDirectoryConfig().catch(() => null),
+        api.getAllDiscountServices().catch(() => []),
+        api.getDiscountPageConfig().catch(() => null),
       ]);
-      return { metrics, businesses, customers, cards, systemSettings, jobs, auditLogs, health, services, offers, governorates, news, cmsPages, products, orders, directoryConfig };
+      return {
+        metrics, businesses, customers, cards, systemSettings, jobs, auditLogs, health,
+        services, offers, governorates, news, cmsPages, products, orders, directoryConfig,
+        discountServices, discountPageConfig
+      };
     }
   });
 
@@ -157,6 +166,8 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     cmsPages: data?.cmsPages || [],
     health: data?.health || null,
     directoryConfig: data?.directoryConfig || null,
+    discountServices: data?.discountServices || [],
+    discountPageConfig: data?.discountPageConfig || null,
     pendingApprovals,
     refetchData,
     refetchApprovals,

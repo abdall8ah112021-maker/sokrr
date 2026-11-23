@@ -332,11 +332,18 @@ export interface FAQEntity {
   isVisible: boolean;
 }
 
+export interface CMSPageSectionEntity {
+  id: string;
+  heading: string;
+  body: string;
+}
+
 export interface CMSPageEntity {
   id: string;
   slug: string;
   title: string;
   content: string;
+  sections?: CMSPageSectionEntity[];
   metaTitle?: string;
   metaDesc?: string;
   version: number;
@@ -347,6 +354,9 @@ export interface CMSPageEntity {
 export interface DiscountServiceEntity {
   id: string;
   title: string;
+  discountPercentage?: number;
+  discountLabel?: string;
+  offerDetails?: string;
   governorateId: string;
   governorateName: string;
   imageUrl: string;
@@ -358,6 +368,23 @@ export interface DiscountServiceEntity {
   description: string;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiscountPageBlockEntity {
+  id: string;
+  title: string;
+  badge?: string;
+  content: string;
+}
+
+export interface DiscountPageConfigEntity {
+  badge: string;
+  title: string;
+  subtitle: string;
+  announcement: string;
+  emptyMessage: string;
+  customBlocks: DiscountPageBlockEntity[];
   updatedAt: string;
 }
 
@@ -440,6 +467,7 @@ export interface DatabaseSchema {
   auditLogs: AuditLogEntity[];
   governorates: GovernorateEntity[];
   directoryConfig: DirectoryConfigEntity;
+  discountPageConfig: DiscountPageConfigEntity;
   jobs: Array<{ id: string; name: string; description: string; schedule: string; status: 'IDLE' | 'RUNNING' | 'FAILED'; lastRun?: string; nextRun?: string; runCount: number; failCount: number }>;
 }
 
@@ -523,6 +551,15 @@ class SugarDatabase {
         }
         if (!parsed.directoryConfig) {
           parsed.directoryConfig = this.getDefaultDirectoryConfig(parsed.sectors);
+        }
+        if (!Array.isArray(parsed.discountServices)) {
+          parsed.discountServices = [];
+        }
+        if (!parsed.discountPageConfig) {
+          parsed.discountPageConfig = this.getDefaultDiscountPageConfig();
+        }
+        if (!Array.isArray(parsed.cmsPages)) {
+          parsed.cmsPages = this.getInitialSeed().cmsPages;
         }
         return parsed;
       } catch {
@@ -1009,7 +1046,20 @@ class SugarDatabase {
       auditLogs,
       governorates,
       directoryConfig: this.getDefaultDirectoryConfig(sectors),
+      discountPageConfig: this.getDefaultDiscountPageConfig(),
       jobs,
+    };
+  }
+
+  private getDefaultDiscountPageConfig(): DiscountPageConfigEntity {
+    return {
+      badge: 'عروض وخصومات حصرية للأعضاء',
+      title: 'صفحة "خصمك عندنا"',
+      subtitle: 'استمتع بأقوى نسب الخصم والعروض الخاصة بأعضاء Sugar Business في محافظتك.',
+      announcement: '',
+      emptyMessage: 'لا توجد عروض خصم مسجلة لهذه المحافظة حالياً. تابعنا قريباً!',
+      customBlocks: [],
+      updatedAt: new Date().toISOString(),
     };
   }
 
@@ -2366,15 +2416,53 @@ class SugarDatabase {
   }
 
   getDiscountServices(governorateId?: string): DiscountServiceEntity[] {
-    if (governorateId) return this.data.discountServices.filter((s) => s.governorateId === governorateId);
-    return this.data.discountServices;
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
+    const active = this.data.discountServices.filter((s) => s.status !== 'INACTIVE');
+    if (governorateId) return active.filter((s) => s.governorateId === governorateId);
+    return active;
   }
 
   getAllDiscountServices(): DiscountServiceEntity[] {
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
     return this.data.discountServices;
   }
 
+  getDiscountPageConfig(): DiscountPageConfigEntity {
+    if (!this.data.discountPageConfig) {
+      this.data.discountPageConfig = this.getDefaultDiscountPageConfig();
+      this.persist();
+    }
+    return this.data.discountPageConfig;
+  }
+
+  updateDiscountPageConfig(updates: Partial<DiscountPageConfigEntity>): DiscountPageConfigEntity {
+    const current = this.getDiscountPageConfig();
+    const nextBlocks: DiscountPageBlockEntity[] = Array.isArray(updates.customBlocks)
+      ? updates.customBlocks
+          .filter((b) => b && typeof b.title === 'string' && b.title.trim().length > 0)
+          .map((b) => ({
+            id: b.id?.trim() || `blk_${crypto.randomUUID().slice(0, 8)}`,
+            title: b.title.trim(),
+            badge: b.badge?.trim() || undefined,
+            content: (b.content || '').trim(),
+          }))
+      : current.customBlocks;
+
+    this.data.discountPageConfig = {
+      badge: updates.badge !== undefined ? updates.badge : current.badge,
+      title: updates.title !== undefined ? updates.title : current.title,
+      subtitle: updates.subtitle !== undefined ? updates.subtitle : current.subtitle,
+      announcement: updates.announcement !== undefined ? updates.announcement : current.announcement,
+      emptyMessage: updates.emptyMessage !== undefined ? updates.emptyMessage : current.emptyMessage,
+      customBlocks: nextBlocks,
+      updatedAt: new Date().toISOString(),
+    };
+    this.persist();
+    return this.data.discountPageConfig;
+  }
+
   createDiscountService(data: Omit<DiscountServiceEntity, 'id' | 'createdAt' | 'updatedAt'>): DiscountServiceEntity {
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
     const service: DiscountServiceEntity = {
       ...data,
       id: `svc_${crypto.randomUUID().slice(0, 8)}`,
@@ -2387,6 +2475,7 @@ class SugarDatabase {
   }
 
   updateDiscountService(id: string, updates: Partial<DiscountServiceEntity>): DiscountServiceEntity | undefined {
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
     const service = this.data.discountServices.find((s) => s.id === id);
     if (!service) return undefined;
     Object.assign(service, updates, { updatedAt: new Date().toISOString() });
@@ -2395,6 +2484,7 @@ class SugarDatabase {
   }
 
   deleteDiscountService(id: string): boolean {
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
     const index = this.data.discountServices.findIndex((s) => s.id === id);
     if (index === -1) return false;
     this.data.discountServices.splice(index, 1);
@@ -2411,15 +2501,34 @@ class SugarDatabase {
   }
 
   upsertCMSPage(
-    data: { slug: string; title: string; content: string; metaTitle?: string; metaDesc?: string; status?: 'DRAFT' | 'PUBLISHED' },
+    data: {
+      slug: string;
+      title: string;
+      content: string;
+      sections?: CMSPageSectionEntity[];
+      metaTitle?: string;
+      metaDesc?: string;
+      status?: 'DRAFT' | 'PUBLISHED';
+    },
     actorId: string = 'usr_super_admin_01'
   ): CMSPageEntity {
     let page = this.data.cmsPages.find((p) => p.slug === data.slug);
     const now = new Date().toISOString();
+    const cleanSections = Array.isArray(data.sections)
+      ? data.sections
+          .filter((s) => s && (s.heading?.trim() || s.body?.trim()))
+          .map((s) => ({
+            id: s.id?.trim() || `sec_${crypto.randomUUID().slice(0, 8)}`,
+            heading: (s.heading || '').trim(),
+            body: (s.body || '').trim(),
+          }))
+      : undefined;
+
     if (page) {
       const before = { ...page };
       page.title = data.title;
       page.content = data.content;
+      if (cleanSections !== undefined) page.sections = cleanSections;
       if (data.metaTitle !== undefined) page.metaTitle = data.metaTitle;
       if (data.metaDesc !== undefined) page.metaDesc = data.metaDesc;
       if (data.status) page.status = data.status;
@@ -2442,6 +2551,7 @@ class SugarDatabase {
         slug: data.slug,
         title: data.title,
         content: data.content,
+        sections: cleanSections || [],
         metaTitle: data.metaTitle || data.title,
         metaDesc: data.metaDesc || data.title,
         version: 1,
@@ -2588,7 +2698,7 @@ class SugarDatabase {
     const metrics = this.getSystemMetrics();
     return {
       membersCount: 10800 + metrics.totalCustomers,
-      cardsCount: 10800 + metrics.activeCards,
+      cardsCount: 9891 + metrics.activeCards,
       partnersCount: 600 + metrics.listedBusinesses,
       pointsCount: 38890 + metrics.totalPointsAwarded,
       raw: {

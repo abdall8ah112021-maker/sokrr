@@ -41,10 +41,12 @@ import {
   TestTube,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Business, Customer, Card, Product, Governorate } from '../types';
+import { Business, Customer, Card, Product, Governorate, CMSPageItem, CMSPageSection, DiscountPageConfig } from '../types';
 import { runAdminCRUDTests } from '../testing/AdminCRUDTest';
 import { AdminStorePage } from '../components/admin/AdminStorePage';
 import { AdminDirectoryPage } from '../components/admin/AdminDirectoryPage';
+import { AdminDiscountPage } from '../components/admin/AdminDiscountPage';
+import { AdminCMSPageEditor } from '../components/admin/AdminCMSPageEditor';
 import { AdminCustomersManager } from '../components/admin/AdminCustomersManager';
 import { AdminServicesManager } from '../components/admin/AdminServicesManager';
 import { AdminOffersManager } from '../components/admin/AdminOffersManager';
@@ -60,10 +62,33 @@ export const AdminDashboardPage: React.FC = () => {
   const { content: siteContent, saveAllContent, resetContent: resetSiteContent } = useSiteContent();
   const { 
     metrics, businesses, customers, news, cards, systemSettings, jobs, auditLogs, 
-    services, offers, governorates, products, orders, directoryConfig, pendingApprovals, refetchData, refetchApprovals 
+    services, offers, governorates, products, orders, cmsPages = [], directoryConfig,
+    discountServices = [], discountPageConfig, pendingApprovals, refetchData, refetchApprovals 
   } = useAdminData();
   const loadData = refetchData;
-  const [activeTab, setActiveTab] = useState<'kpis' | 'content' | 'approvals' | 'customers' | 'businesses' | 'directory' | 'cards' | 'points' | 'settings' | 'jobs' | 'audit' | 'store' | 'services' | 'offers' | 'governorates' | 'notifications' | 'news'>('kpis');
+  const [activeTab, setActiveTab] = useState<
+    | 'kpis'
+    | 'content'
+    | 'approvals'
+    | 'customers'
+    | 'businesses'
+    | 'directory'
+    | 'discount-page'
+    | 'cms-about'
+    | 'cms-terms'
+    | 'cms-privacy'
+    | 'cards'
+    | 'points'
+    | 'settings'
+    | 'jobs'
+    | 'audit'
+    | 'store'
+    | 'services'
+    | 'offers'
+    | 'governorates'
+    | 'notifications'
+    | 'news'
+  >('kpis');
 
   const pendingCustomers = React.useMemo(() => {
     const map = new Map<string, any>();
@@ -109,7 +134,6 @@ export const AdminDashboardPage: React.FC = () => {
   const [contentSaveSuccess, setContentSaveSuccess] = useState<string | null>(null);
 
   // CMS Pages Editor State
-  const { cmsPages = [] } = useAdminData(); // Assuming I add this
   const [selectedCmsSlug, setSelectedCmsSlug] = useState<string>('about-us');
   const [cmsEditTitle, setCmsEditTitle] = useState('');
   const [cmsEditContent, setCmsEditContent] = useState('');
@@ -371,6 +395,59 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
+  const handleSaveDiscountPageConfig = async (config: Partial<DiscountPageConfig>) => {
+    try {
+      await api.updateDiscountPageConfig(config);
+      loadData();
+      broadcastDirectoryChange();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleCreateDiscountService = async (data: any) => {
+    try {
+      await api.createDiscountService(data);
+      loadData();
+      broadcastDirectoryChange();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleUpdateDiscountService = async (id: string, data: any) => {
+    try {
+      await api.updateDiscountService(id, data);
+      loadData();
+      broadcastDirectoryChange();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteDiscountService = async (id: string) => {
+    try {
+      await api.deleteDiscountService(id);
+      loadData();
+      broadcastDirectoryChange();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleSaveManagedCmsPage = async (
+    slug: string,
+    payload: { title: string; content: string; sections: CMSPageSection[]; metaDesc?: string }
+  ) => {
+    try {
+      await api.updateCMSPage(slug, payload);
+      loadData();
+      broadcastDirectoryChange();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   const handleCreateBusiness = async (business: Partial<Business>) => {
     try {
       await api.adminCreateBusiness(business);
@@ -499,6 +576,10 @@ export const AdminDashboardPage: React.FC = () => {
           { id: 'customers', label: 'إدارة العملاء', icon: <Users className="w-4 h-4 shrink-0" /> },
           { id: 'businesses', label: 'المتاجر والشركاء', icon: <Store className="w-4 h-4 shrink-0" /> },
           { id: 'directory', label: 'دليل الشركاء والمتاجر', icon: <Globe className="w-4 h-4 text-sky-400 shrink-0" /> },
+          { id: 'discount-page', label: 'خصمك عندنا', icon: <Tag className="w-4 h-4 text-amber-400 shrink-0" /> },
+          { id: 'cms-about', label: 'عن Sugar Business', icon: <FileText className="w-4 h-4 text-sky-400 shrink-0" /> },
+          { id: 'cms-terms', label: 'الشروط والأحكام', icon: <Shield className="w-4 h-4 text-emerald-400 shrink-0" /> },
+          { id: 'cms-privacy', label: 'سياسة الخصوصية', icon: <Shield className="w-4 h-4 text-purple-400 shrink-0" /> },
           { id: 'store', label: 'صفحة المتجر', icon: <ShoppingBag className="w-4 h-4 shrink-0" /> },
           { id: 'services', label: 'إدارة الخدمات', icon: <Tag className="w-4 h-4 shrink-0" /> },
           { id: 'offers', label: 'إدارة العروض', icon: <Sparkles className="w-4 h-4 shrink-0" /> },
@@ -1096,6 +1177,59 @@ export const AdminDashboardPage: React.FC = () => {
           onDeleteBusiness={handleDeleteBusiness}
           onSaveConfig={handleSaveDirectoryConfig}
           onRefresh={loadData}
+        />
+      )}
+
+      {/* ================= TAB: DISCOUNT PAGE (خصمك عندنا) ================= */}
+      {activeTab === 'discount-page' && (
+        <AdminDiscountPage
+          discountServices={discountServices}
+          governorates={governorates}
+          discountPageConfig={discountPageConfig}
+          onCreateService={handleCreateDiscountService}
+          onUpdateService={handleUpdateDiscountService}
+          onDeleteService={handleDeleteDiscountService}
+          onSaveConfig={handleSaveDiscountPageConfig}
+          onRefresh={loadData}
+        />
+      )}
+
+      {/* ================= TAB: CMS ABOUT (عن Sugar Business) ================= */}
+      {activeTab === 'cms-about' && (
+        <AdminCMSPageEditor
+          slug="about-us"
+          page={cmsPages.find((p: CMSPageItem) => p.slug === 'about-us')}
+          defaultTitle="عن منظومة Sugar Business"
+          defaultBadge="عن Sugar Business"
+          headingSubtitle="كتابة وتعديل نبذة عن المنظومة، الرؤية، الأهداف، وإضافة أو حذف الفقرات والمميزات."
+          itemLabel="فقرة / قسم"
+          onSave={handleSaveManagedCmsPage}
+        />
+      )}
+
+      {/* ================= TAB: CMS TERMS (الشروط والأحكام) ================= */}
+      {activeTab === 'cms-terms' && (
+        <AdminCMSPageEditor
+          slug="terms-and-conditions"
+          page={cmsPages.find((p: CMSPageItem) => p.slug === 'terms-and-conditions')}
+          defaultTitle="الشروط والأحكام"
+          defaultBadge="الشروط والأحكام"
+          headingSubtitle="إضافة وتعديل وحذف الشروط والأحكام والبنود التنظيمية الخاصة باستخدام الموقع والمنظومة."
+          itemLabel="بند / شرط"
+          onSave={handleSaveManagedCmsPage}
+        />
+      )}
+
+      {/* ================= TAB: CMS PRIVACY (سياسة الخصوصية) ================= */}
+      {activeTab === 'cms-privacy' && (
+        <AdminCMSPageEditor
+          slug="privacy-policy"
+          page={cmsPages.find((p: CMSPageItem) => p.slug === 'privacy-policy')}
+          defaultTitle="سياسة الخصوصية وحماية البيانات"
+          defaultBadge="سياسة الخصوصية"
+          headingSubtitle="إضافة وتعديل وحذف بنود سياسة الخصوصية وحماية بيانات العملاء والشركاء."
+          itemLabel="بند خصوصية"
+          onSave={handleSaveManagedCmsPage}
         />
       )}
 

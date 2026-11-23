@@ -67,6 +67,15 @@ var SugarDatabase = class {
         if (!parsed.directoryConfig) {
           parsed.directoryConfig = this.getDefaultDirectoryConfig(parsed.sectors);
         }
+        if (!Array.isArray(parsed.discountServices)) {
+          parsed.discountServices = [];
+        }
+        if (!parsed.discountPageConfig) {
+          parsed.discountPageConfig = this.getDefaultDiscountPageConfig();
+        }
+        if (!Array.isArray(parsed.cmsPages)) {
+          parsed.cmsPages = this.getInitialSeed().cmsPages;
+        }
         return parsed;
       } catch {
       }
@@ -533,7 +542,19 @@ var SugarDatabase = class {
       auditLogs,
       governorates,
       directoryConfig: this.getDefaultDirectoryConfig(sectors),
+      discountPageConfig: this.getDefaultDiscountPageConfig(),
       jobs
+    };
+  }
+  getDefaultDiscountPageConfig() {
+    return {
+      badge: "\u0639\u0631\u0648\u0636 \u0648\u062E\u0635\u0648\u0645\u0627\u062A \u062D\u0635\u0631\u064A\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621",
+      title: '\u0635\u0641\u062D\u0629 "\u062E\u0635\u0645\u0643 \u0639\u0646\u062F\u0646\u0627"',
+      subtitle: "\u0627\u0633\u062A\u0645\u062A\u0639 \u0628\u0623\u0642\u0648\u0649 \u0646\u0633\u0628 \u0627\u0644\u062E\u0635\u0645 \u0648\u0627\u0644\u0639\u0631\u0648\u0636 \u0627\u0644\u062E\u0627\u0635\u0629 \u0628\u0623\u0639\u0636\u0627\u0621 Sugar Business \u0641\u064A \u0645\u062D\u0627\u0641\u0638\u062A\u0643.",
+      announcement: "",
+      emptyMessage: "\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u0631\u0648\u0636 \u062E\u0635\u0645 \u0645\u0633\u062C\u0644\u0629 \u0644\u0647\u0630\u0647 \u0627\u0644\u0645\u062D\u0627\u0641\u0638\u0629 \u062D\u0627\u0644\u064A\u0627\u064B. \u062A\u0627\u0628\u0639\u0646\u0627 \u0642\u0631\u064A\u0628\u0627\u064B!",
+      customBlocks: [],
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
   getDefaultDirectoryConfig(sectors) {
@@ -1640,13 +1661,44 @@ var SugarDatabase = class {
     return ticket;
   }
   getDiscountServices(governorateId) {
-    if (governorateId) return this.data.discountServices.filter((s) => s.governorateId === governorateId);
-    return this.data.discountServices;
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
+    const active = this.data.discountServices.filter((s) => s.status !== "INACTIVE");
+    if (governorateId) return active.filter((s) => s.governorateId === governorateId);
+    return active;
   }
   getAllDiscountServices() {
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
     return this.data.discountServices;
   }
+  getDiscountPageConfig() {
+    if (!this.data.discountPageConfig) {
+      this.data.discountPageConfig = this.getDefaultDiscountPageConfig();
+      this.persist();
+    }
+    return this.data.discountPageConfig;
+  }
+  updateDiscountPageConfig(updates) {
+    const current = this.getDiscountPageConfig();
+    const nextBlocks = Array.isArray(updates.customBlocks) ? updates.customBlocks.filter((b) => b && typeof b.title === "string" && b.title.trim().length > 0).map((b) => ({
+      id: b.id?.trim() || `blk_${crypto.randomUUID().slice(0, 8)}`,
+      title: b.title.trim(),
+      badge: b.badge?.trim() || void 0,
+      content: (b.content || "").trim()
+    })) : current.customBlocks;
+    this.data.discountPageConfig = {
+      badge: updates.badge !== void 0 ? updates.badge : current.badge,
+      title: updates.title !== void 0 ? updates.title : current.title,
+      subtitle: updates.subtitle !== void 0 ? updates.subtitle : current.subtitle,
+      announcement: updates.announcement !== void 0 ? updates.announcement : current.announcement,
+      emptyMessage: updates.emptyMessage !== void 0 ? updates.emptyMessage : current.emptyMessage,
+      customBlocks: nextBlocks,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    this.persist();
+    return this.data.discountPageConfig;
+  }
   createDiscountService(data) {
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
     const service = {
       ...data,
       id: `svc_${crypto.randomUUID().slice(0, 8)}`,
@@ -1658,6 +1710,7 @@ var SugarDatabase = class {
     return service;
   }
   updateDiscountService(id, updates) {
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
     const service = this.data.discountServices.find((s) => s.id === id);
     if (!service) return void 0;
     Object.assign(service, updates, { updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
@@ -1665,6 +1718,7 @@ var SugarDatabase = class {
     return service;
   }
   deleteDiscountService(id) {
+    if (!Array.isArray(this.data.discountServices)) this.data.discountServices = [];
     const index = this.data.discountServices.findIndex((s) => s.id === id);
     if (index === -1) return false;
     this.data.discountServices.splice(index, 1);
@@ -1680,10 +1734,16 @@ var SugarDatabase = class {
   upsertCMSPage(data, actorId = "usr_super_admin_01") {
     let page = this.data.cmsPages.find((p) => p.slug === data.slug);
     const now = (/* @__PURE__ */ new Date()).toISOString();
+    const cleanSections = Array.isArray(data.sections) ? data.sections.filter((s) => s && (s.heading?.trim() || s.body?.trim())).map((s) => ({
+      id: s.id?.trim() || `sec_${crypto.randomUUID().slice(0, 8)}`,
+      heading: (s.heading || "").trim(),
+      body: (s.body || "").trim()
+    })) : void 0;
     if (page) {
       const before = { ...page };
       page.title = data.title;
       page.content = data.content;
+      if (cleanSections !== void 0) page.sections = cleanSections;
       if (data.metaTitle !== void 0) page.metaTitle = data.metaTitle;
       if (data.metaDesc !== void 0) page.metaDesc = data.metaDesc;
       if (data.status) page.status = data.status;
@@ -1705,6 +1765,7 @@ var SugarDatabase = class {
         slug: data.slug,
         title: data.title,
         content: data.content,
+        sections: cleanSections || [],
         metaTitle: data.metaTitle || data.title,
         metaDesc: data.metaDesc || data.title,
         version: 1,
@@ -1828,7 +1889,7 @@ var SugarDatabase = class {
     const metrics = this.getSystemMetrics();
     return {
       membersCount: 10800 + metrics.totalCustomers,
-      cardsCount: 10800 + metrics.activeCards,
+      cardsCount: 9891 + metrics.activeCards,
       partnersCount: 600 + metrics.listedBusinesses,
       pointsCount: 38890 + metrics.totalPointsAwarded,
       raw: {
@@ -3337,13 +3398,13 @@ apiRouter.get("/cms/:slug", (req, res) => {
 });
 apiRouter.put("/admin/cms/:slug", requirePermission(Permissions.CMS_MANAGE), (req, res) => {
   try {
-    const { title, content, metaTitle, metaDesc, status } = req.body;
-    if (!title || !content) {
+    const { title, content, sections, metaTitle, metaDesc, status } = req.body;
+    if (!title || content === void 0 && !Array.isArray(sections)) {
       res.status(400).json({ success: false, error: { code: "VALIDATION_ERROR", message: "\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" } });
       return;
     }
     const page = db.upsertCMSPage(
-      { slug: req.params.slug, title, content, metaTitle, metaDesc, status },
+      { slug: req.params.slug, title, content: content || "", sections, metaTitle, metaDesc, status },
       req.user.id
     );
     res.json({ success: true, data: page });
@@ -3354,6 +3415,21 @@ apiRouter.put("/admin/cms/:slug", requirePermission(Permissions.CMS_MANAGE), (re
 apiRouter.get("/governorates", (req, res) => {
   res.json({ success: true, data: db.getGovernorates() });
 });
+apiRouter.get("/discount-services/config", (_req, res) => {
+  res.json({ success: true, data: db.getDiscountPageConfig() });
+});
+apiRouter.put("/admin/discount-services/config", requirePermission(Permissions.SERVICES_MANAGE), (req, res) => {
+  const updated = db.updateDiscountPageConfig(req.body || {});
+  db.recordAuditLog({
+    actorId: req.user.id,
+    actorRole: req.user.role,
+    action: "DISCOUNT_PAGE_CONFIG_UPDATED",
+    entity: "SYSTEM",
+    entityId: "discount_page_config",
+    reason: "\u062A\u062D\u062F\u064A\u062B \u0646\u0635\u0648\u0635 \u0648\u0639\u0646\u0627\u0635\u0631 \u0635\u0641\u062D\u0629 \u062E\u0635\u0645\u0643 \u0639\u0646\u062F\u0646\u0627 \u0645\u0646 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629"
+  });
+  res.json({ success: true, data: updated });
+});
 apiRouter.get("/discount-services", (req, res) => {
   const governorateId = req.query.governorateId;
   res.json({ success: true, data: db.getDiscountServices(governorateId) });
@@ -3363,19 +3439,37 @@ apiRouter.get("/admin/discount-services", requirePermission(Permissions.SERVICES
 });
 apiRouter.post("/admin/discount-services", requirePermission(Permissions.SERVICES_MANAGE), (req, res) => {
   try {
-    const { title, governorateId, governorateName, imageUrl, galleryImages, phone, whatsapp, subscriptionPrice, validityDate, description, status } = req.body;
-    if (!title || !phone) {
-      res.status(400).json({ success: false, error: { code: "MISSING_FIELDS", message: "\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" } });
+    const {
+      title,
+      discountPercentage,
+      discountLabel,
+      offerDetails,
+      governorateId,
+      governorateName,
+      imageUrl,
+      galleryImages,
+      phone,
+      whatsapp,
+      subscriptionPrice,
+      validityDate,
+      description,
+      status
+    } = req.body;
+    if (!title) {
+      res.status(400).json({ success: false, error: { code: "MISSING_FIELDS", message: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0639\u0631\u0636 \u0623\u0648 \u0627\u0644\u062E\u0635\u0645 \u0645\u0637\u0644\u0648\u0628" } });
       return;
     }
     const service = db.createDiscountService({
       title,
+      discountPercentage: discountPercentage !== void 0 && discountPercentage !== "" ? Number(discountPercentage) : void 0,
+      discountLabel: discountLabel ? String(discountLabel).trim() : void 0,
+      offerDetails: offerDetails ? String(offerDetails).trim() : void 0,
       governorateId: governorateId || "gov_cairo",
       governorateName: governorateName || "\u0627\u0644\u0642\u0627\u0647\u0631\u0629",
       imageUrl: imageUrl || "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&auto=format&fit=crop&q=80",
       galleryImages: galleryImages || [],
-      phone,
-      whatsapp: whatsapp || phone,
+      phone: phone || "",
+      whatsapp: whatsapp || phone || "",
       subscriptionPrice: Number(subscriptionPrice || 0),
       validityDate: validityDate || "2026-12-31",
       description: description || "",
